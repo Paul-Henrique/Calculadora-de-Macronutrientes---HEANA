@@ -1,4 +1,6 @@
-# DietCalc - Sistema de Cálculo Nutricional
+# Calculadora de Macronutrientes — HEANA (DietCalc)
+
+Projeto para uma demanda do hospital para fazer cálculos de nutrientes para os pacientes, com uma implementação completa (DietCalc) de frontend e backend para cálculo, planejamento e acompanhamento nutricional.
 
 ## Visão Geral
 DietCalc é uma aplicação web completa para planejamento nutricional, utilizando a Tabela TACO como base de dados. O sistema permite calcular necessidades calóricas (TMB/GET), montar refeições e acompanhar o progresso via dashboard.
