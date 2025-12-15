@@ -4,6 +4,7 @@ from enum import Enum
 
 class FoodBase(BaseModel):
     name: str
+    description: Optional[str]
     base_qty: float
     base_unit: str
     energy_kcal: Optional[float]
@@ -17,6 +18,28 @@ class Food(FoodBase):
 
     class Config:
         orm_mode = True
+
+class FoodCreate(BaseModel):
+    name: str
+    description: str
+    energy_kcal: float
+    protein: float
+    carbohydrate: float
+    lipid: float
+    base_qty: float = 100.0
+    base_unit: str = "g"
+    category_id: Optional[int] = None
+
+class FoodUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    energy_kcal: Optional[float] = None
+    protein: Optional[float] = None
+    carbohydrate: Optional[float] = None
+    lipid: Optional[float] = None
+    base_qty: Optional[float] = None
+    base_unit: Optional[str] = None
+    category_id: Optional[int] = None
 
 class CategoryBase(BaseModel):
     name: str

@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { Plus, Trash2, Utensils, ChevronDown, ChevronUp } from 'lucide-react';
-import api, { getMeals, createMeal, deleteMeal, addMealItem, removeMealItem } from '../services/api';
-import { Meal, MealItem } from '../types';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Plus, Trash2, Utensils } from 'lucide-react';
+import { getMeals, createMeal, deleteMeal, addMealItem, removeMealItem } from '../services/api';
+import { Meal } from '../types';
 import FoodSelector from '../components/FoodSelector';
 
 export default function MealPlanner() {
@@ -18,9 +18,7 @@ export default function MealPlanner() {
     fetchMeals();
   }, []);
 
-  useEffect(() => {
-    calculateDailyTotals();
-  }, [meals]);
+  
 
   const fetchMeals = async () => {
     setLoading(true);
@@ -40,7 +38,7 @@ export default function MealPlanner() {
     }
   };
 
-  const calculateDailyTotals = () => {
+  const calculateDailyTotals = useCallback(() => {
     let kcal = 0, protein = 0, carbs = 0, fat = 0;
     meals.forEach(meal => {
       meal.items.forEach(item => {
@@ -54,7 +52,11 @@ export default function MealPlanner() {
       });
     });
     setDailyTotals({ kcal, protein, carbs, fat });
-  };
+  }, [meals]);
+
+  useEffect(() => {
+    calculateDailyTotals();
+  }, [calculateDailyTotals]);
 
   const handleCreateMeal = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -84,16 +86,13 @@ export default function MealPlanner() {
   };
 
   const handleAddFood = async (foodId: number, quantity: number) => {
-    if (currentMealId === null) return;
+    if (currentMealId === null) throw new Error('Nenhuma refeição selecionada');
     try {
-      const updatedMeal = await addMealItem(currentMealId, { food_id: foodId, quantity });
-      // The backend returns the updated meal, but we need to ensure nested food objects are populated if we rely on them for display immediately.
-      // If backend response for `add_item_to_meal` includes `items` with `food`, we are good.
-      // If not, we might need to re-fetch meals or manually patch.
-      // Let's re-fetch for simplicity to ensure data consistency.
+      await addMealItem(currentMealId, { food_id: foodId, quantity });
       await fetchMeals(); 
     } catch (error) {
       console.error('Error adding food:', error);
+      throw error;
     }
   };
 
@@ -195,14 +194,11 @@ function MealCard({ meal, onDelete, onAddFood, onRemoveItem }: {
     onRemoveItem: (id: number) => void
 }) {
     // Calculate meal totals
-    let kcal = 0, protein = 0, carbs = 0, fat = 0;
+    let kcal = 0;
     meal.items.forEach(item => {
         if (item.food) {
            const ratio = item.quantity / 100;
            kcal += (item.food.energy_kcal || 0) * ratio;
-           protein += (item.food.protein || 0) * ratio;
-           carbs += (item.food.carbohydrate || 0) * ratio;
-           fat += (item.food.lipid || 0) * ratio;
         }
     });
 

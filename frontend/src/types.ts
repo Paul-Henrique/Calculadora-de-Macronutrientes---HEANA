@@ -1,6 +1,7 @@
 export interface Food {
     id: number;
     name: string;
+    description?: string;
     category_id?: number;
     base_qty: number;
     base_unit: string;
@@ -102,7 +103,7 @@ export interface UserProfile {
     goal_fat_g: number;
 }
 
-export interface UserProfileCreate extends Omit<UserProfile, 'id'> {}
+export type UserProfileCreate = Omit<UserProfile, 'id'>;
 
 export interface HouseholdMeasure {
     id: number;

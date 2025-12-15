@@ -25,7 +25,7 @@ frontend/.env
 
 # Large data files
 *.xlsx
+*.ods
 
 # Logs
 **/*.log
-

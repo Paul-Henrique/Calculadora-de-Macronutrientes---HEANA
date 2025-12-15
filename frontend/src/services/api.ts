@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { NutritionCalculationRequest, NutritionCalculationResponse, Meal, MealCreate, MealItemCreate, UserProfile, UserProfileCreate, HouseholdMeasure } from '../types';
+import { NutritionCalculationRequest, NutritionCalculationResponse, Meal, MealCreate, MealItemCreate, UserProfile, UserProfileCreate, HouseholdMeasure, Food } from '../types';
 
 const api = axios.create({
   baseURL: 'http://localhost:8000',
@@ -47,6 +47,21 @@ export const saveProfile = async (data: UserProfileCreate): Promise<UserProfile>
 export const getHouseholdMeasures = async (foodId: number): Promise<HouseholdMeasure[]> => {
   const response = await api.get<HouseholdMeasure[]>(`/measures/${foodId}`);
   return response.data;
+};
+
+// Foods CRUD
+export const createFood = async (data: Partial<Food> & { name: string; description: string }): Promise<Food> => {
+  const response = await api.post<Food>('/foods/', data);
+  return response.data;
+};
+
+export const updateFood = async (id: number, data: Partial<Food>): Promise<Food> => {
+  const response = await api.put<Food>(`/foods/${id}`, data);
+  return response.data;
+};
+
+export const deleteFood = async (id: number): Promise<void> => {
+  await api.delete(`/foods/${id}`);
 };
 
 export default api;

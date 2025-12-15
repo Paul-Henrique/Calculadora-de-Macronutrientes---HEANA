@@ -2,9 +2,18 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from .routers import foods, nutrition, meals, profile, household_measures
 from .database import engine, Base
+from sqlalchemy import text
 
 # Create tables (if not exist, though we used import script)
 Base.metadata.create_all(bind=engine)
+
+# Lightweight migration: add 'description' column to foods if missing
+try:
+    with engine.connect() as conn:
+        conn.execute(text("ALTER TABLE foods ADD COLUMN description TEXT"))
+except Exception:
+    # Column may already exist or DB may not support this form; ignore
+    pass
 
 app = FastAPI(
     title="DietCalc API",

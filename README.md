@@ -1,64 +1,84 @@
-# Calculadora de Macronutrientes — HEANA (DietCalc)
+# DietCalc — Calculadora e Planejamento Nutricional
 
-Projeto para uma demanda do hospital para fazer cálculos de nutrientes para os pacientes, com uma implementação completa (DietCalc) de frontend e backend para cálculo, planejamento e acompanhamento nutricional.
+DietCalc é uma aplicação web completa para cálculo nutricional (TMB/GET), registro de refeições e acompanhamento via dashboard, utilizando a Tabela TACO como base de dados.
 
-## Visão Geral
-DietCalc é uma aplicação web completa para planejamento nutricional, utilizando a Tabela TACO como base de dados. O sistema permite calcular necessidades calóricas (TMB/GET), montar refeições e acompanhar o progresso via dashboard.
+## Objetivos
+- Calcular necessidades energéticas diárias com precisão.
+- Planejar e registrar refeições com macros calculadas automaticamente.
+- Acompanhar metas vs. consumo em gráficos e relatórios exportáveis (CSV/PDF).
 
-## Tecnologias Utilizadas
-- **Backend**: Python, FastAPI, SQLAlchemy, SQLite (Dev) / PostgreSQL (Prod).
-- **Frontend**: React, TypeScript, TailwindCSS, Recharts, React Hook Form.
-- **Infraestrutura**: Docker ready, Supabase compatible.
+## Requisitos do Sistema
+- `Python >= 3.10` (recomendado 3.11)
+- `Node.js >= 18`
+- Banco de dados: SQLite (dev) ou PostgreSQL (prod)
 
-## Funcionalidades Principais
-1. **Consulta de Alimentos**: Base TACO importada e pesquisável.
-2. **Calculadora Nutricional**: Fórmula Mifflin-St Jeor para TMB e GET.
-3. **Planejador de Refeições**: Criação de dietas com contagem automática de macros.
-4. **Medidas Caseiras**: Conversão automática (ex: "1 Colher de sopa" = 25g).
-5. **Dashboard**: Comparativo visual entre Metas e Consumo.
+## Instalação e Configuração
 
-## Configuração e Instalação
+### 1) Backend
+- Instalar dependências:
+  ```bash
+  pip install -r backend/requirements.txt
+  ```
+- Configurar variáveis de ambiente:
+  - Criar um arquivo `.env` na raiz baseado em `.env.example`
+  - Opcional (PostgreSQL): `DATABASE_URL=postgresql://usuario:senha@host:5432/banco`
+  - Sem `DATABASE_URL`, o backend usa SQLite automaticamente em `backend/data/dietcalc.db`
+- Popular base TACO (opcional, para dev):
+  ```bash
+  python backend/import_taco.py
+  python backend/seed_measures.py
+  ```
+- Executar servidor:
+  ```bash
+  uvicorn backend.app.main:app --reload --host 0.0.0.0 --port 8000
+  ```
 
-### Pré-requisitos
-- Python 3.9+
-- Node.js 16+
+### 2) Frontend
+- Instalar dependências:
+  ```bash
+  cd frontend
+  npm install
+  ```
+- Executar modo desenvolvimento:
+  ```bash
+  npm run dev
+  ```
 
-### Backend
-1. Instale as dependências:
-   ```bash
-   pip install -r backend/requirements.txt
-   ```
-2. Inicialize o banco de dados (SQLite):
-   ```bash
-   python backend/import_taco.py
-   python backend/seed_measures.py
-   ```
-3. Rode o servidor:
-   ```bash
-   uvicorn backend.app.main:app --reload
-   ```
+## Guia de Uso Básico
+- Acesse `http://localhost:5173` (ou porta alternativa) para abrir o aplicativo.
+- Calcule sua TMB/GET em `Calculadora` e salve o perfil.
+- Registre alimentos e refeições em `Alimentos` e `Refeições`.
+- Acompanhe metas vs. consumo em `Dashboard`.
+- Exporte dados em `CSV` e gere relatório em `PDF` pelo `Dashboard`.
 
-### Frontend
-1. Instale as dependências:
-   ```bash
-   cd frontend
-   npm install
-   ```
-2. Rode o servidor de desenvolvimento:
-   ```bash
-   npm run dev
-   ```
+## Estrutura de Arquivos
+- `backend/`: API FastAPI, modelos SQLAlchemy, rotas e scripts
+- `frontend/`: Aplicação React + TypeScript (pages, components, services)
+- `supabase/`: migrações SQL para Postgres
+- `ARCHITECTURE.md`: visão técnica do sistema
+- `.env.example`: variáveis de ambiente necessárias (sem valores)
+- `.gitignore`: exclusões de repositório (node_modules, __pycache__, .env, db, etc.)
 
-## Estrutura do Banco de Dados (Supabase/PostgreSQL)
-O esquema do banco de dados está disponível em `supabase/migrations/20240522000000_init_schema.sql`.
+## Dependências
+- Backend (principais): FastAPI, Uvicorn, SQLAlchemy, Pydantic, Pandas, python-dotenv
+- Frontend (principais): React, TypeScript, TailwindCSS, Recharts, React Router, React Hook Form
 
-### Tabelas Principais:
-- `foods`: Tabela nutricional (TACO).
-- `user_profiles`: Metas do usuário.
-- `meals` / `meal_items`: Registro de dieta.
-- `household_measures`: Conversão de unidades.
+## Padrões de Versionamento e Commits
+- Commits semânticos (Conventional Commits):
+  - `feat:`, `fix:`, `docs:`, `chore:`, `refactor:`, `test:`
+  - Ex.: `fix(dashboard): renderizar gráfico de macros no PDF`
+- Tags semânticas: `vMAJOR.MINOR.PATCH` (ex.: `v1.0.0`)
 
-## Próximos Passos (Roadmap)
-- [ ] Autenticação Multi-usuário (JWT/Supabase Auth).
-- [ ] Histórico de peso e evolução.
-- [ ] Geração de PDF da dieta.
+## Segurança e Ambiente
+- Nunca versionar `.env` ou credenciais; usar `.env.example`.
+- Em produção, preferir PostgreSQL com `DATABASE_URL` seguro.
+- CORS liberado apenas em desenvolvimento.
+
+## Testes
+- Backend: `pytest` com `TestClient` (ex.: `backend/tests/test_nutrition.py`)
+- Frontend: testes podem ser adicionados com `vitest`/`@testing-library/react` (sugestão futura)
+
+## Roadmap
+- Autenticação multiusuário
+- Histórico e evolução de métricas
+- Exportação avançada de relatórios

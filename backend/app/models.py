@@ -16,6 +16,7 @@ class Food(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, index=True)
     category_id = Column(Integer, ForeignKey("categories.id"))
+    description = Column(String, nullable=True)
     
     base_qty = Column(Float, default=100.0) # Usually 100g
     base_unit = Column(String, default="g")

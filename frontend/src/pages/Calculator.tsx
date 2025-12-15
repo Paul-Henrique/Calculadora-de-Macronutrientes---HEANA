@@ -1,14 +1,35 @@
-import React, { useState } from 'react';
-import { useForm, Controller } from 'react-hook-form';
+import React, { useEffect, useState } from 'react';
+import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { calculateNutrition, saveProfile } from '../services/api';
-import { ActivityLevel, NutritionCalculationResponse, Sex } from '../types';
+import { ActivityLevel, NutritionCalculationResponse, Sex, NutritionCalculationRequest } from '../types';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
 import { Loader2, RefreshCw, ChevronRight, Save } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 const schema = z.object({
+  patientName: z.string().min(1, "Informe o nome"),
+  birthDate: z.string().min(10, "Informe a data no formato DD/MM/AAAA").superRefine((val, ctx) => {
+    const m = /^\d{2}\/\d{2}\/\d{4}$/.exec(val);
+    if (!m) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Formato inválido (DD/MM/AAAA)" });
+      return;
+    }
+    const [dStr, mStr, yStr] = val.split('/');
+    const d = Number(dStr);
+    const mo = Number(mStr);
+    const y = Number(yStr);
+    const dt = new Date(y, mo - 1, d);
+    if (dt.getFullYear() !== y || dt.getMonth() !== mo - 1 || dt.getDate() !== d) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Data inválida" });
+      return;
+    }
+    const now = new Date();
+    if (dt > now) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Data no futuro" });
+    }
+  }),
   age: z.coerce.number().min(1, "Idade deve ser maior que 0").max(120, "Idade inválida"),
   weight: z.coerce.number().min(1, "Peso deve ser maior que 0").max(500, "Peso inválido"),
   height: z.coerce.number().min(1, "Altura deve ser maior que 0").max(300, "Altura inválida"),
@@ -36,9 +57,11 @@ export default function Calculator() {
   const [error, setError] = useState<string | null>(null);
   const [currentData, setCurrentData] = useState<FormData | null>(null);
 
-  const { register, handleSubmit, control, reset, formState: { errors } } = useForm<FormData>({
+  const { register, handleSubmit, reset, formState: { errors }, setValue, watch } = useForm<FormData>({
     resolver: zodResolver(schema),
     defaultValues: {
+      patientName: "",
+      birthDate: "",
       sex: Sex.M,
       activity_level: ActivityLevel.SEDENTARY
     }
@@ -49,9 +72,15 @@ export default function Calculator() {
     setError(null);
     setCurrentData(data);
     try {
-      const response = await calculateNutrition(data);
+      const req: NutritionCalculationRequest = {
+        age: data.age,
+        weight: data.weight,
+        height: data.height,
+        sex: data.sex,
+        activity_level: data.activity_level,
+      };
+      const response = await calculateNutrition(req);
       setResult(response);
-      // Scroll to results
       setTimeout(() => {
         document.getElementById('results-section')?.scrollIntoView({ behavior: 'smooth' });
       }, 100);
@@ -63,13 +92,40 @@ export default function Calculator() {
     }
   };
 
+  const birthDateValue = watch('birthDate');
+  useEffect(() => {
+    if (!birthDateValue) return;
+    const parts = birthDateValue.split('/');
+    if (parts.length !== 3) {
+      setValue('age', 0, { shouldValidate: true });
+      return;
+    }
+    const d = Number(parts[0]);
+    const mo = Number(parts[1]);
+    const y = Number(parts[2]);
+    const dt = new Date(y, mo - 1, d);
+    if (dt.getFullYear() !== y || dt.getMonth() !== mo - 1 || dt.getDate() !== d) {
+      setValue('age', 0, { shouldValidate: true });
+      return;
+    }
+    const now = new Date();
+    if (dt > now) {
+      setValue('age', 0, { shouldValidate: true });
+      return;
+    }
+    let age = now.getFullYear() - y;
+    const hadBirthday = (now.getMonth() > dt.getMonth()) || (now.getMonth() === dt.getMonth() && now.getDate() >= dt.getDate());
+    if (!hadBirthday) age -= 1;
+    setValue('age', age, { shouldValidate: true });
+  }, [birthDateValue, setValue]);
+
   const handleSaveProfile = async () => {
     if (!result || !currentData) return;
     
     setSaving(true);
     try {
       await saveProfile({
-        name: "Usuário", // Default name for MVP
+        name: currentData.patientName,
         age: currentData.age,
         weight: currentData.weight,
         height: currentData.height,
@@ -112,7 +168,29 @@ export default function Calculator() {
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 md:p-8">
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Idade */}
+            <div className="space-y-2 md:col-span-2">
+              <label className="block text-sm font-medium text-gray-700">Nome do Paciente</label>
+              <input
+                type="text"
+                {...register('patientName')}
+                className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
+                placeholder="Ex: João Silva"
+              />
+              {errors.patientName && <p className="text-red-500 text-sm">{errors.patientName.message}</p>}
+            </div>
+
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-gray-700">Data de Nascimento (DD/MM/AAAA)</label>
+              <input
+                type="text"
+                {...register('birthDate')}
+                className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
+                placeholder="Ex: 25/12/1990"
+                inputMode="numeric"
+              />
+              {errors.birthDate && <p className="text-red-500 text-sm">{errors.birthDate.message}</p>}
+            </div>
+
             <div className="space-y-2">
               <label className="block text-sm font-medium text-gray-700">Idade (anos)</label>
               <input
@@ -120,6 +198,7 @@ export default function Calculator() {
                 {...register('age')}
                 className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
                 placeholder="Ex: 30"
+                readOnly
               />
               {errors.age && <p className="text-red-500 text-sm">{errors.age.message}</p>}
             </div>

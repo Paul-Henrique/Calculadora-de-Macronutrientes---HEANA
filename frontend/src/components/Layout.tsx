@@ -1,6 +1,6 @@
-import React, { Fragment } from 'react';
+import React from 'react';
 import { Link, Outlet, useLocation } from 'react-router-dom';
-import { Disclosure, Menu, Transition } from '@headlessui/react';
+import { Disclosure } from '@headlessui/react';
 import { Menu as MenuIcon, X, User, Utensils, Calculator, BarChart2 } from 'lucide-react';
 import clsx from 'clsx';
 
