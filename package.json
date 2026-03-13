@@ -1,0 +1,43 @@
+{
+  "name": "dietcalc",
+  "version": "1.0.0",
+  "description": "Calculadora Nutricional Standalone",
+  "main": "main.js",
+  "scripts": {
+    "start": "NODE_ENV=development concurrently \"npm run dev --prefix frontend\" \"wait-on http://localhost:5173 && electron .\"",
+    "build": "npm run build --prefix frontend && electron-builder",
+    "package-backend": "pip install pyinstaller && pyinstaller --onefile backend/app/main.py --name backend --distpath build/bin"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1",
+    "electron": "^41.0.0",
+    "electron-builder": "^26.8.1",
+    "wait-on": "^9.0.4"
+  },
+  "build": {
+    "appId": "com.dietcalc.app",
+    "productName": "DietCalc",
+    "files": [
+      "main.js",
+      "preload.js",
+      "frontend/dist/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "build/bin",
+        "to": "bin",
+        "filter": [
+          "**/*"
+        ]
+      }
+    ],
+    "directories": {
+      "output": "dist"
+    },
+    "win": {
+      "target": "nsis",
+      "signAndEditExecutable": false
+    },
+    "forceCodeSigning": false
+  }
+}
