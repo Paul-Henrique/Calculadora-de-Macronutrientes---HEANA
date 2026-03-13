@@ -66,45 +66,72 @@ export default function Dashboard() {
     if (!pdfOpen) return;
     setPdfChartError(null);
     setChartImg(null);
-    const run = () => {
-      try {
-        const svgEl = chartRef.current?.querySelector('svg');
-        if (!svgEl) {
-          setPdfChartError('Gráfico indisponível para exportação');
-          return;
-        }
-        const content = new XMLSerializer().serializeToString(svgEl);
-        const svgDataUrl = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(content);
-        const container = chartRef.current as HTMLDivElement;
-        const width = container.clientWidth || 600;
-        const height = container.clientHeight || 300;
-        const canvas = document.createElement('canvas');
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d');
-        if (!ctx) {
-          setPdfChartError('Canvas não disponível');
-          return;
-        }
-        const img = new Image();
-        img.onload = () => {
-          try {
-            ctx.clearRect(0, 0, width, height);
-            ctx.drawImage(img, 0, 0, width, height);
-            const pngUrl = canvas.toDataURL('image/png');
-            setChartImg(pngUrl);
-          } catch {
-            setPdfChartError('Falha ao rasterizar gráfico');
+    
+    // Pequeno atraso para garantir que o Recharts tenha renderizado o SVG no DOM
+    const timeoutId = setTimeout(() => {
+      const run = () => {
+        try {
+          const svgEl = chartRef.current?.querySelector('svg');
+          if (!svgEl) {
+            setPdfChartError('Gráfico indisponível para exportação');
+            return;
           }
-        };
-        img.onerror = () => setPdfChartError('Falha ao carregar gráfico');
-        img.src = svgDataUrl;
-      } catch {
-        setPdfChartError('Erro ao preparar gráfico');
-      }
-    };
-    const id = requestAnimationFrame(run);
-    return () => cancelAnimationFrame(id);
+
+          // Clone o SVG para não afetar o original durante a manipulação de estilos se necessário
+          const clonedSvg = svgEl.cloneNode(true) as SVGSVGElement;
+          
+          // Garanta que o SVG tenha dimensões explícitas para o XMLSerializer e Canvas
+          const width = chartRef.current?.clientWidth || 600;
+          const height = chartRef.current?.clientHeight || 300;
+          clonedSvg.setAttribute('width', width.toString());
+          clonedSvg.setAttribute('height', height.toString());
+
+          const content = new XMLSerializer().serializeToString(clonedSvg);
+          const svgBlob = new Blob([content], { type: 'image/svg+xml;charset=utf-8' });
+          const url = URL.createObjectURL(svgBlob);
+          
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          
+          if (!ctx) {
+            setPdfChartError('Canvas não disponível');
+            URL.revokeObjectURL(url);
+            return;
+          }
+
+          const img = new Image();
+          img.onload = () => {
+            try {
+              ctx.clearRect(0, 0, width, height);
+              // Preencha o fundo com branco (importante para PDFs)
+              ctx.fillStyle = '#ffffff';
+              ctx.fillRect(0, 0, width, height);
+              ctx.drawImage(img, 0, 0, width, height);
+              const pngUrl = canvas.toDataURL('image/png');
+              setChartImg(pngUrl);
+              URL.revokeObjectURL(url);
+            } catch (e) {
+              console.error('Erro ao rasterizar:', e);
+              setPdfChartError('Falha ao rasterizar gráfico');
+              URL.revokeObjectURL(url);
+            }
+          };
+          img.onerror = () => {
+            setPdfChartError('Falha ao carregar gráfico');
+            URL.revokeObjectURL(url);
+          };
+          img.src = url;
+        } catch (e) {
+          console.error('Erro ao preparar gráfico:', e);
+          setPdfChartError('Erro ao preparar gráfico');
+        }
+      };
+      run();
+    }, 500); // 500ms é geralmente suficiente para o Recharts renderizar
+
+    return () => clearTimeout(timeoutId);
   }, [pdfOpen, macroComparisonData]);
 
   if (loading) {
