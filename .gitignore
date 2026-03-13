@@ -29,3 +29,11 @@ frontend/.env
 
 # Logs
 **/*.log
+
+# Electron / Packaging
+dist/
+build/
+*.spec
+dist_electron/
+node_modules/
+package-lock.json
