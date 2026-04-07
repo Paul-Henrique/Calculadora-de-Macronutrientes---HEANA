@@ -1,58 +1,32 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy.orm import Session
 from .routers import foods, nutrition, meals, profile, household_measures, patients
 from .database import engine, Base
+from . import database, models
 from sqlalchemy import text
 
-# Create tables (if not exist, though we used import script)
-Base.metadata.create_all(bind=engine)
+# Bases for SQLAlchemy
 
-# Lightweight migration: add columns if missing
-with engine.connect() as conn:
-    try:
-        conn.execute(text("ALTER TABLE foods ADD COLUMN description TEXT"))
-    except Exception:
-        pass
-    
-    # Adicionar colunas faltantes em user_profiles
-    columns_to_add = [
-        ("patient_id", "INTEGER REFERENCES patients(id)"),
-        ("circ_waist", "FLOAT"),
-        ("circ_hip", "FLOAT"),
-        ("circ_abdomen", "FLOAT"),
-        ("circ_right_arm", "FLOAT"),
-        ("circ_right_thigh", "FLOAT"),
-        ("comorbidities", "TEXT"),
-        ("dietary_restrictions", "TEXT"),
-        ("intestinal_habit", "TEXT"),
-        ("water_intake", "TEXT"),
-        ("physical_activity", "TEXT"),
-        ("patient_goal", "TEXT"),
-        ("schedule_routine", "TEXT"),
-        ("lab_triglycerides", "FLOAT"),
-        ("lab_glucose", "FLOAT"),
-        ("lab_cholesterol", "FLOAT"),
-        ("nutritionist_conduct", "TEXT")
-    ]
-    
-    for col_name, col_type in columns_to_add:
-        try:
-            conn.execute(text(f"ALTER TABLE user_profiles ADD COLUMN {col_name} {col_type}"))
-        except Exception:
-            pass
-            
-    try:
-        conn.execute(text("ALTER TABLE meals ADD COLUMN patient_id INTEGER REFERENCES patients(id)"))
-    except Exception:
-        pass
-    
-    conn.commit()
+from . import database, models, migration_service
 
 app = FastAPI(
     title="DietCalc API",
     description="API para cálculo nutricional baseada na tabela TACO",
     version="0.1.0"
 )
+
+@app.on_event("startup")
+async def startup_event():
+    # Only migrate if we have a PG engine (not falling back to SQLite)
+    # Check if DATABASE_URL is set and engine is NOT sqlite
+    if "postgresql" in str(database.engine.url):
+        print("[Startup] PostgreSQL detected. Checking for initial migration...")
+        database.Base.metadata.create_all(bind=database.engine)
+        migration_service.migrate_to_pg(database.engine)
+    else:
+        print("[Startup] Using SQLite/Fallback mode. Ensuring tables exist...")
+        database.Base.metadata.create_all(bind=database.engine)
 
 # CORS (Allow all for dev)
 app.add_middleware(
@@ -73,3 +47,20 @@ app.include_router(patients.router)
 @app.get("/")
 def read_root():
     return {"message": "Welcome to DietCalc API"}
+
+@app.get("/health")
+def health_check(db: Session = Depends(database.get_db)):
+    try:
+        from . import models
+        food_count = db.query(models.Food).count()
+        cat_count = db.query(models.Category).count()
+        return {
+            "status": "healthy",
+            "database": "connected",
+            "food_count": food_count,
+            "category_count": cat_count,
+            "db_path": database.get_db_path()
+        }
+    except Exception as e:
+        return {"status": "unhealthy", "error": str(e)}
+

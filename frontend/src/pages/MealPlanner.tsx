@@ -1,10 +1,12 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { Plus, Trash2, Utensils, AlertCircle } from 'lucide-react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { Plus, Utensils, AlertCircle } from 'lucide-react';
 import { getMeals, createMeal, deleteMeal, addMealItem, removeMealItem } from '../services/api';
 import { Meal } from '../types';
 import FoodSelector from '../components/FoodSelector';
 import { usePatient } from '../contexts/PatientContext';
 import { Link } from 'react-router-dom';
+import { MealCard } from '../components/meals/MealCard';
+import { formatNumber } from '../utils/formatters';
 
 export default function MealPlanner() {
   const { selectedPatient } = usePatient();
@@ -13,9 +15,6 @@ export default function MealPlanner() {
   const [isSelectorOpen, setIsSelectorOpen] = useState(false);
   const [currentMealId, setCurrentMealId] = useState<number | null>(null);
   const [newMealName, setNewMealName] = useState('');
-
-  // Daily totals
-  const [dailyTotals, setDailyTotals] = useState({ kcal: 0, protein: 0, carbs: 0, fat: 0 });
 
   const fetchMeals = useCallback(async () => {
     if (!selectedPatient) return;
@@ -34,7 +33,7 @@ export default function MealPlanner() {
     fetchMeals();
   }, [fetchMeals]);
 
-  const calculateDailyTotals = useCallback(() => {
+  const dailyTotals = useMemo(() => {
     let kcal = 0, protein = 0, carbs = 0, fat = 0;
     meals.forEach(meal => {
       meal.items.forEach(item => {
@@ -47,12 +46,8 @@ export default function MealPlanner() {
         }
       });
     });
-    setDailyTotals({ kcal, protein, carbs, fat });
+    return { kcal, protein, carbs, fat };
   }, [meals]);
-
-  useEffect(() => {
-    calculateDailyTotals();
-  }, [calculateDailyTotals]);
 
   const handleCreateMeal = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -113,21 +108,14 @@ export default function MealPlanner() {
           </div>
           <h2 className="text-2xl font-bold text-gray-900 mb-4">Nenhum Paciente Selecionado</h2>
           <p className="text-gray-600 mb-8 max-w-md mx-auto">
-            Para gerenciar refeições, você precisa primeiro selecionar um paciente na aba de Gerenciamento de Pacientes.
+            Para gerenciar refeições, selecione um paciente na aba de Gerenciamento de Pacientes.
           </p>
-          <Link 
-            to="/pacientes" 
-            className="inline-flex items-center space-x-2 bg-indigo-600 text-white px-8 py-3 rounded-xl hover:bg-indigo-700 transition-all font-semibold shadow-lg shadow-indigo-200"
-          >
-            <span>Ir para Pacientes</span>
+          <Link to="/pacientes" className="bg-indigo-600 text-white px-8 py-3 rounded-xl hover:bg-indigo-700 font-semibold shadow-lg transition-all">
+            Ir para Pacientes
           </Link>
         </div>
       </div>
     );
-  }
-
-  if (loading) {
-    return <div className="p-8 text-center">Carregando refeições...</div>;
   }
 
   return (
@@ -138,28 +126,26 @@ export default function MealPlanner() {
           <p className="text-gray-600">Monte sua dieta diária e acompanhe os macros.</p>
         </div>
         
-        {/* Daily Totals Summary */}
         <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200 flex gap-6 text-sm">
            <div>
              <div className="text-gray-500">Calorias</div>
-             <div className="font-bold text-lg text-gray-900">{dailyTotals.kcal.toFixed(0)} kcal</div>
+             <div className="font-bold text-lg text-gray-900">{formatNumber(dailyTotals.kcal, 0)} kcal</div>
            </div>
            <div>
              <div className="text-gray-500">Proteína</div>
-             <div className="font-bold text-lg text-blue-600">{dailyTotals.protein.toFixed(1)}g</div>
+             <div className="font-bold text-lg text-blue-600">{formatNumber(dailyTotals.protein, 1)}g</div>
            </div>
            <div>
              <div className="text-gray-500">Carbo</div>
-             <div className="font-bold text-lg text-green-600">{dailyTotals.carbs.toFixed(1)}g</div>
+             <div className="font-bold text-lg text-green-600">{formatNumber(dailyTotals.carbs, 1)}g</div>
            </div>
            <div>
              <div className="text-gray-500">Gordura</div>
-             <div className="font-bold text-lg text-yellow-600">{dailyTotals.fat.toFixed(1)}g</div>
+             <div className="font-bold text-lg text-yellow-600">{formatNumber(dailyTotals.fat, 1)}g</div>
            </div>
         </div>
       </div>
 
-      {/* Create Meal Form */}
       <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
         <form onSubmit={handleCreateMeal} className="flex gap-4">
           <input
@@ -169,17 +155,12 @@ export default function MealPlanner() {
             value={newMealName}
             onChange={(e) => setNewMealName(e.target.value)}
           />
-          <button
-            type="submit"
-            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
-          >
-            <Plus className="h-5 w-5 mr-2" />
-            Criar Refeição
+          <button type="submit" className="bg-green-600 px-4 py-2 text-sm font-semibold text-white rounded-md hover:bg-green-500 shadow-sm flex items-center">
+            <Plus className="h-5 w-5 mr-2" /> Criar Refeição
           </button>
         </form>
       </div>
 
-      {/* Meal List */}
       <div className="space-y-6">
         {loading && meals.length === 0 ? (
              <div className="text-center py-10 text-gray-500">Carregando refeições...</div>
@@ -210,91 +191,4 @@ export default function MealPlanner() {
       />
     </div>
   );
-}
-
-function MealCard({ meal, onDelete, onAddFood, onRemoveItem }: { 
-    meal: Meal, 
-    onDelete: () => void, 
-    onAddFood: () => void,
-    onRemoveItem: (id: number) => void
-}) {
-    // Calculate meal totals
-    let kcal = 0;
-    meal.items.forEach(item => {
-        if (item.food) {
-           const ratio = item.quantity / 100;
-           kcal += (item.food.energy_kcal || 0) * ratio;
-        }
-    });
-
-    return (
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-            <div className="bg-gray-50 px-4 py-3 border-b border-gray-200 flex justify-between items-center">
-                <h3 className="text-lg font-medium text-gray-900">{meal.name}</h3>
-                <div className="flex items-center space-x-4">
-                    <div className="text-sm text-gray-500">
-                        <span className="font-semibold text-gray-900">{kcal.toFixed(0)}</span> kcal
-                    </div>
-                    <button onClick={onDelete} className="text-red-400 hover:text-red-600">
-                        <Trash2 className="h-5 w-5" />
-                    </button>
-                </div>
-            </div>
-            
-            <div className="p-4">
-                {meal.items.length > 0 ? (
-                    <div className="overflow-x-auto">
-                        <table className="min-w-full divide-y divide-gray-200">
-                            <thead>
-                                <tr>
-                                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Alimento</th>
-                                    <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Qtd</th>
-                                    <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Kcal</th>
-                                    <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Macros (P/C/G)</th>
-                                    <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider"></th>
-                                </tr>
-                            </thead>
-                            <tbody className="bg-white divide-y divide-gray-200">
-                                {meal.items.map(item => {
-                                    if (!item.food) return null;
-                                    const ratio = item.quantity / 100;
-                                    return (
-                                        <tr key={item.id}>
-                                            <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900">{item.food.name}</td>
-                                            <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-500 text-right">{item.quantity}g</td>
-                                            <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-900 text-right">{((item.food.energy_kcal || 0) * ratio).toFixed(0)}</td>
-                                            <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-500 text-right">
-                                                <span className="text-blue-600">{((item.food.protein || 0) * ratio).toFixed(1)}</span> / 
-                                                <span className="text-green-600">{((item.food.carbohydrate || 0) * ratio).toFixed(1)}</span> / 
-                                                <span className="text-yellow-600">{((item.food.lipid || 0) * ratio).toFixed(1)}</span>
-                                            </td>
-                                            <td className="px-3 py-2 whitespace-nowrap text-right text-sm font-medium">
-                                                <button onClick={() => onRemoveItem(item.id)} className="text-red-400 hover:text-red-600">
-                                                    <Trash2 className="h-4 w-4" />
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    );
-                                })}
-                            </tbody>
-                        </table>
-                    </div>
-                ) : (
-                    <div className="text-center py-6 text-gray-400 text-sm italic">
-                        Nenhum alimento adicionado.
-                    </div>
-                )}
-                
-                <div className="mt-4">
-                    <button
-                        onClick={onAddFood}
-                        className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
-                    >
-                        <Plus className="h-4 w-4 mr-2" />
-                        Adicionar Alimento
-                    </button>
-                </div>
-            </div>
-        </div>
-    );
 }

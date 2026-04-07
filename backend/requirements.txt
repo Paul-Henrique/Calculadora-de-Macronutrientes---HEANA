@@ -8,3 +8,5 @@ passlib[bcrypt]
 pandas>=2.2.0
 openpyxl
 python-dotenv
+alembic
+psycopg2-binary

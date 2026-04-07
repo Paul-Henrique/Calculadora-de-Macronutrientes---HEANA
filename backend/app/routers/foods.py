@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from typing import List, Optional
 from .. import models, schemas, database
 
@@ -16,7 +16,7 @@ def read_foods(
     category_id: Optional[int] = None,
     db: Session = Depends(database.get_db)
 ):
-    query = db.query(models.Food)
+    query = db.query(models.Food).options(joinedload(models.Food.household_measures))
     
     if search:
         query = query.filter(models.Food.name.ilike(f"%{search}%"))
@@ -34,24 +34,14 @@ def read_categories(db: Session = Depends(database.get_db)):
 
 @router.get("/{food_id}", response_model=schemas.Food)
 def read_food(food_id: int, db: Session = Depends(database.get_db)):
-    food = db.query(models.Food).filter(models.Food.id == food_id).first()
+    food = db.query(models.Food).options(joinedload(models.Food.household_measures)).filter(models.Food.id == food_id).first()
     if food is None:
         raise HTTPException(status_code=404, detail="Food not found")
     return food
 
 @router.post("/", response_model=schemas.Food)
 def create_food(food: schemas.FoodCreate, db: Session = Depends(database.get_db)):
-    db_food = models.Food(
-        name=food.name,
-        description=food.description,
-        base_qty=food.base_qty,
-        base_unit=food.base_unit,
-        energy_kcal=food.energy_kcal,
-        protein=food.protein,
-        carbohydrate=food.carbohydrate,
-        lipid=food.lipid,
-        category_id=food.category_id,
-    )
+    db_food = models.Food(**food.model_dump())
     db.add(db_food)
     db.commit()
     db.refresh(db_food)
@@ -63,7 +53,7 @@ def update_food(food_id: int, updates: schemas.FoodUpdate, db: Session = Depends
     if not db_food:
         raise HTTPException(status_code=404, detail="Food not found")
 
-    data = updates.dict(exclude_unset=True)
+    data = updates.model_dump(exclude_unset=True)
     for key, value in data.items():
         setattr(db_food, key, value)
 

@@ -24,6 +24,7 @@ export default function FoodSelector({ isOpen, onClose, onSelect }: FoodSelector
     
     // Measures
     const [measures, setMeasures] = useState<HouseholdMeasure[]>([]);
+    const [measuresLoading, setMeasuresLoading] = useState(false);
     const [selectedMeasureId, setSelectedMeasureId] = useState<number | 'g'>('g');
     const [measureQuantity, setMeasureQuantity] = useState<number>(1);
     const [actionLoading, setActionLoading] = useState(false);
@@ -78,6 +79,7 @@ export default function FoodSelector({ isOpen, onClose, onSelect }: FoodSelector
             setSelectedFood(null);
             setQuantity(100);
             setMeasures([]);
+            setMeasuresLoading(false);
             setSelectedMeasureId('g');
             setMeasureQuantity(1);
             setListOpen(true);
@@ -102,14 +104,23 @@ export default function FoodSelector({ isOpen, onClose, onSelect }: FoodSelector
     useEffect(() => {
         if (selectedFood) {
             setActionError(null);
+            setMeasuresLoading(true);
+            setMeasures([]);
+            
             getHouseholdMeasures(selectedFood.id)
               .then(data => {
+                  console.log(`[FoodSelector] Loaded ${data.length} measures for food ${selectedFood.id}`);
                   setMeasures(data);
               })
-              .catch(() => {
+              .catch((err) => {
+                  console.error('[FoodSelector] Error loading measures:', err);
                   setMeasures([]);
-                  setActionError('Falha ao carregar medidas do alimento');
+                  // Don't show critical error to user, just stick to "g"
+              })
+              .finally(() => {
+                  setMeasuresLoading(false);
               });
+
             setQuantity(100);
             setSelectedMeasureId('g');
             setMeasureQuantity(1);
@@ -258,24 +269,31 @@ export default function FoodSelector({ isOpen, onClose, onSelect }: FoodSelector
                                 
                                 <div className="flex flex-col space-y-3">
                                     <div className="flex items-center space-x-2">
-                                        <select 
-                                            className="block w-1/2 pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-sm rounded-md"
-                                            value={selectedMeasureId}
-                                            onChange={(e) => {
-                                                const val = e.target.value === 'g' ? 'g' : Number(e.target.value);
-                                                setSelectedMeasureId(val);
-                                                if (val === 'g') {
-                                                    setQuantity(100); // Reset to 100g default
-                                                } else {
-                                                    setMeasureQuantity(1); // Reset multiplier
-                                                }
-                                            }}
-                                        >
-                                            <option value="g">Gramas (g)</option>
-                                            {measures.map(m => (
-                                                <option key={m.id} value={m.id}>{m.unit_name} (~{m.quantity_g}g)</option>
-                                            ))}
-                                        </select>
+                                        <div className="flex-1">
+                                            <select 
+                                                className="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-sm rounded-md"
+                                                value={selectedMeasureId}
+                                                onChange={(e) => {
+                                                    const val = e.target.value === 'g' ? 'g' : Number(e.target.value);
+                                                    setSelectedMeasureId(val);
+                                                    if (val === 'g') {
+                                                        setQuantity(100); // Reset to 100g default
+                                                    } else {
+                                                        setMeasureQuantity(1); // Reset multiplier
+                                                    }
+                                                }}
+                                                disabled={measuresLoading}
+                                            >
+                                                <option value="g">Gramas (g)</option>
+                                                {measures.map(m => (
+                                                    <option key={m.id} value={m.id}>{m.unit_name} (~{m.quantity_g}g)</option>
+                                                ))}
+                                            </select>
+                                            {measuresLoading && <p className="text-xs text-gray-500 mt-1">Carregando medidas...</p>}
+                                            {!measuresLoading && measures.length === 0 && selectedFood && (
+                                                <p className="text-xs text-gray-400 mt-1 italic">Nenhuma medida caseira disponível para este item.</p>
+                                            )}
+                                        </div>
 
                                         {selectedMeasureId === 'g' ? (
                                             <input

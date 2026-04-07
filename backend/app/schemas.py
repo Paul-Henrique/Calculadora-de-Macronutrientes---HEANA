@@ -1,11 +1,16 @@
+from __future__ import annotations
 from pydantic import BaseModel, Field, ConfigDict
 from typing import Optional, List, Dict
 from enum import Enum
 from datetime import date
 
+# Shared Config
+class BaseSchema(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
 # Patient Schemas
 class PatientBase(BaseModel):
-    name: str
+    name: str = Field(..., min_length=2)
     cpf: Optional[str] = None
     birth_date: Optional[date] = None
     sex: Optional[str] = None
@@ -19,35 +24,43 @@ class PatientUpdate(BaseModel):
     birth_date: Optional[date] = None
     sex: Optional[str] = None
 
-class Patient(PatientBase):
+class Patient(PatientBase, BaseSchema):
     id: int
-    model_config = ConfigDict(from_attributes=True)
+
+# Category Schemas
+class CategoryBase(BaseModel):
+    name: str
+
+class CategoryCreate(CategoryBase):
+    pass
+
+class CategorySimple(CategoryBase, BaseSchema):
+    id: int
+
+# Household Measure Schemas
+class HouseholdMeasureBase(BaseModel):
+    unit_name: str
+    quantity_g: float = Field(..., gt=0)
+
+class HouseholdMeasureCreate(HouseholdMeasureBase):
+    food_id: int
+
+class HouseholdMeasure(HouseholdMeasureBase, BaseSchema):
+    id: int
+    food_id: int
 
 # Food Schemas
 class FoodBase(BaseModel):
-    name: str
-    description: Optional[str]
-    base_qty: float
-    base_unit: str
-    energy_kcal: Optional[float]
-    protein: Optional[float]
-    carbohydrate: Optional[float]
-    lipid: Optional[float]
-
-class Food(FoodBase):
-    id: int
-    category_id: Optional[int]
-    model_config = ConfigDict(from_attributes=True)
-
-class FoodCreate(BaseModel):
-    name: str
-    description: str
-    energy_kcal: float
-    protein: float
-    carbohydrate: float
-    lipid: float
+    name: str = Field(..., min_length=2)
+    description: Optional[str] = None
     base_qty: float = 100.0
     base_unit: str = "g"
+    energy_kcal: Optional[float] = None
+    protein: Optional[float] = None
+    carbohydrate: Optional[float] = None
+    lipid: Optional[float] = None
+
+class FoodCreate(FoodBase):
     category_id: Optional[int] = None
 
 class FoodUpdate(BaseModel):
@@ -61,20 +74,17 @@ class FoodUpdate(BaseModel):
     base_unit: Optional[str] = None
     category_id: Optional[int] = None
 
-class CategoryBase(BaseModel):
-    name: str
+class Food(FoodBase, BaseSchema):
+    id: int
+    category_id: Optional[int] = None
+    household_measures: List[HouseholdMeasure] = []
 
-class Category(CategoryBase):
+# Category with Foods (Forward ref)
+class Category(CategoryBase, BaseSchema):
     id: int
     foods: List[Food] = []
-    model_config = ConfigDict(from_attributes=True)
-
-class CategorySimple(CategoryBase):
-    id: int
-    model_config = ConfigDict(from_attributes=True)
 
 # Nutrition Calculation Schemas
-
 class SexEnum(str, Enum):
     M = "M"
     F = "F"
@@ -87,17 +97,17 @@ class ActivityLevelEnum(str, Enum):
     EXTRA_ACTIVE = "extra_active"  # 1.9
 
 class NutritionCalculationRequest(BaseModel):
-    age: int = Field(..., gt=0, description="Age in years")
-    weight: float = Field(..., gt=0, description="Weight in kg")
-    height: float = Field(..., gt=0, description="Height in cm")
+    age: int = Field(..., gt=0)
+    weight: float = Field(..., gt=0)
+    height: float = Field(..., gt=0)
     sex: SexEnum
     activity_level: ActivityLevelEnum
 
 class MacroRange(BaseModel):
-    min_grams: int
-    max_grams: int
-    min_pct: int
-    max_pct: int
+    min_grams: float
+    max_grams: float
+    min_pct: float
+    max_pct: float
 
 class NutritionCalculationResponse(BaseModel):
     tmb: float
@@ -107,40 +117,36 @@ class NutritionCalculationResponse(BaseModel):
     explanation: str
 
 # Meal Schemas
-
 class MealItemBase(BaseModel):
     food_id: int
-    quantity: float = Field(..., gt=0, description="Quantity in grams")
+    quantity: float = Field(..., gt=0)
 
 class MealItemCreate(MealItemBase):
     pass
 
-class MealItem(MealItemBase):
+class MealItem(MealItemBase, BaseSchema):
     id: int
     meal_id: int
     food: Optional[Food] = None
-    model_config = ConfigDict(from_attributes=True)
 
 class MealBase(BaseModel):
-    name: str
+    name: str = Field(..., min_length=1)
     patient_id: Optional[int] = None
 
 class MealCreate(MealBase):
     items: List[MealItemCreate] = []
 
-class Meal(MealBase):
+class Meal(MealBase, BaseSchema):
     id: int
     items: List[MealItem] = []
-    model_config = ConfigDict(from_attributes=True)
 
 # User Profile Schemas
-
 class UserProfileBase(BaseModel):
     name: str = "User"
     patient_id: Optional[int] = None
-    age: int
-    weight: float
-    height: float
+    age: int = Field(..., gt=0)
+    weight: float = Field(..., gt=0)
+    height: float = Field(..., gt=0)
     sex: SexEnum
     activity_level: ActivityLevelEnum
     
@@ -177,20 +183,5 @@ class UserProfileBase(BaseModel):
 class UserProfileCreate(UserProfileBase):
     pass
 
-class UserProfile(UserProfileBase):
+class UserProfile(UserProfileBase, BaseSchema):
     id: int
-    model_config = ConfigDict(from_attributes=True)
-
-# Household Measure Schemas
-
-class HouseholdMeasureBase(BaseModel):
-    unit_name: str
-    quantity_g: float
-
-class HouseholdMeasureCreate(HouseholdMeasureBase):
-    food_id: int
-
-class HouseholdMeasure(HouseholdMeasureBase):
-    id: int
-    food_id: int
-    model_config = ConfigDict(from_attributes=True)

@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from typing import List, Optional
 from .. import models, schemas, database
 
@@ -12,14 +12,12 @@ router = APIRouter(
 def create_meal(meal: schemas.MealCreate, db: Session = Depends(database.get_db)):
     db_meal = models.Meal(name=meal.name, patient_id=meal.patient_id)
     db.add(db_meal)
-    db.commit()
-    db.refresh(db_meal)
+    db.flush() # Get ID without committing yet
     
     for item in meal.items:
         db_item = models.MealItem(
             meal_id=db_meal.id,
-            food_id=item.food_id,
-            quantity=item.quantity
+            **item.model_dump()
         )
         db.add(db_item)
     
@@ -29,7 +27,9 @@ def create_meal(meal: schemas.MealCreate, db: Session = Depends(database.get_db)
 
 @router.get("/", response_model=List[schemas.Meal])
 def read_meals(patient_id: Optional[int] = None, skip: int = 0, limit: int = 100, db: Session = Depends(database.get_db)):
-    query = db.query(models.Meal)
+    query = db.query(models.Meal).options(
+        joinedload(models.Meal.items).joinedload(models.MealItem.food).joinedload(models.Food.household_measures)
+    )
     if patient_id:
         query = query.filter(models.Meal.patient_id == patient_id)
     meals = query.offset(skip).limit(limit).all()
@@ -37,7 +37,9 @@ def read_meals(patient_id: Optional[int] = None, skip: int = 0, limit: int = 100
 
 @router.get("/{meal_id}", response_model=schemas.Meal)
 def read_meal(meal_id: int, db: Session = Depends(database.get_db)):
-    meal = db.query(models.Meal).filter(models.Meal.id == meal_id).first()
+    meal = db.query(models.Meal).options(
+        joinedload(models.Meal.items).joinedload(models.MealItem.food).joinedload(models.Food.household_measures)
+    ).filter(models.Meal.id == meal_id).first()
     if meal is None:
         raise HTTPException(status_code=404, detail="Meal not found")
     return meal
@@ -60,12 +62,15 @@ def add_item_to_meal(meal_id: int, item: schemas.MealItemCreate, db: Session = D
         
     db_item = models.MealItem(
         meal_id=meal_id,
-        food_id=item.food_id,
-        quantity=item.quantity
+        **item.model_dump()
     )
     db.add(db_item)
     db.commit()
     db.refresh(meal)
+    # Re-fetch with full relations
+    meal = db.query(models.Meal).options(
+        joinedload(models.Meal.items).joinedload(models.MealItem.food).joinedload(models.Food.household_measures)
+    ).filter(models.Meal.id == meal_id).first()
     return meal
 
 @router.delete("/{meal_id}/items/{item_id}", response_model=schemas.Meal)
@@ -77,5 +82,8 @@ def remove_item_from_meal(meal_id: int, item_id: int, db: Session = Depends(data
     db.delete(item)
     db.commit()
     
-    meal = db.query(models.Meal).filter(models.Meal.id == meal_id).first()
+    # Return the meal with full relations
+    meal = db.query(models.Meal).options(
+        joinedload(models.Meal.items).joinedload(models.MealItem.food).joinedload(models.Food.household_measures)
+    ).filter(models.Meal.id == meal_id).first()
     return meal

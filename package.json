@@ -4,9 +4,9 @@
   "description": "Calculadora Nutricional Standalone",
   "main": "main.js",
   "scripts": {
-    "start": "NODE_ENV=development concurrently \"npm run dev --prefix frontend\" \"wait-on http://localhost:5173 && electron .\"",
-    "build": "npm run build --prefix frontend && electron-builder",
-    "package-backend": "pip install pyinstaller && pyinstaller --onefile backend/app/main.py --name backend --distpath build/bin"
+    "start": "NODE_ENV=development concurrently \"npm run dev --prefix frontend\" \"python backend/run.py\" \"wait-on http://localhost:5173 http://localhost:8000 && electron .\"",
+    "build": "npm run build --prefix frontend && npm run package-backend && electron-builder",
+    "package-backend": "pip install pyinstaller && pyinstaller --clean --distpath build/bin backend.spec"
   },
   "devDependencies": {
     "concurrently": "^9.2.1",

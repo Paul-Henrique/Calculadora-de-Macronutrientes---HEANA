@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, ReactNode } from 'react';
 import { Patient } from '../types';
 
 interface PatientContextType {
@@ -14,22 +14,28 @@ export const PatientProvider: React.FC<{ children: ReactNode }> = ({ children })
     return saved ? JSON.parse(saved) : null;
   });
 
-  const selectPatient = (patient: Patient | null) => {
+  const selectPatient = React.useCallback((patient: Patient | null) => {
     setSelectedPatient(patient);
     if (patient) {
       localStorage.setItem('selectedPatient', JSON.stringify(patient));
     } else {
       localStorage.removeItem('selectedPatient');
     }
-  };
+  }, []);
+
+  const value = React.useMemo(() => ({
+    selectedPatient,
+    selectPatient
+  }), [selectedPatient, selectPatient]);
 
   return (
-    <PatientContext.Provider value={{ selectedPatient, selectPatient }}>
+    <PatientContext.Provider value={value}>
       {children}
     </PatientContext.Provider>
   );
 };
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const usePatient = () => {
   const context = useContext(PatientContext);
   if (context === undefined) {

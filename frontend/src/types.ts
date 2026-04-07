@@ -31,6 +31,7 @@ export interface Food {
     protein?: number;
     carbohydrate?: number;
     lipid?: number;
+    household_measures?: HouseholdMeasure[];
 }
 
 export interface Category {

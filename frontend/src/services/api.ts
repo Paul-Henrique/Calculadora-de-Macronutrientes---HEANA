@@ -1,10 +1,15 @@
 import axios from 'axios';
-import { NutritionCalculationRequest, NutritionCalculationResponse, Meal, MealCreate, MealItemCreate, UserProfile, UserProfileCreate, HouseholdMeasure, Food, Patient, PatientCreate, PatientUpdate } from '../types';
+import { NutritionCalculationRequest, NutritionCalculationResponse, Meal, MealCreate, MealItemCreate, UserProfile, UserProfileCreate, HouseholdMeasure, HouseholdMeasureCreate, Food, Patient, PatientCreate, PatientUpdate } from '../types';
 
 const api = axios.create({
-  baseURL: 'http://localhost:8000',
+  baseURL: 'http://127.0.0.1:8000',
   timeout: 10000, // 10 seconds timeout
 });
+
+// Health check to verify backend connectivity
+api.get('/health')
+  .then(res => console.log('[API Health] OK:', res.data))
+  .catch(err => console.error('[API Health] FAIL:', err.message));
 
 // Interceptor para logging detalhado e tratamento de erros global
 api.interceptors.response.use(
@@ -121,6 +126,15 @@ export const saveProfile = async (data: UserProfileCreate): Promise<UserProfile>
 export const getHouseholdMeasures = async (foodId: number): Promise<HouseholdMeasure[]> => {
   const response = await api.get<HouseholdMeasure[]>(`/measures/${foodId}`);
   return response.data;
+};
+
+export const addHouseholdMeasure = async (data: HouseholdMeasureCreate): Promise<HouseholdMeasure> => {
+  const response = await api.post<HouseholdMeasure>('/measures/', data);
+  return response.data;
+};
+
+export const deleteHouseholdMeasure = async (measureId: number): Promise<void> => {
+  await api.delete(`/measures/${measureId}`);
 };
 
 // Foods CRUD

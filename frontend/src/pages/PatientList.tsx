@@ -86,9 +86,9 @@ const PatientList: React.FC = () => {
       setEditingPatient(null);
       setFormData({ name: '', cpf: '', birth_date: '', sex: 'M' });
       fetchPatients();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('[PatientList] Erro ao salvar:', error);
-      const detail = error.response?.data?.detail || 'Erro ao salvar paciente';
+      const detail = (error as { response?: { data?: { detail?: string } } }).response?.data?.detail || 'Erro ao salvar paciente';
       setErrorMsg(typeof detail === 'string' ? detail : JSON.stringify(detail));
     } finally {
       setSaving(false);
@@ -101,7 +101,7 @@ const PatientList: React.FC = () => {
         await deletePatient(id);
         if (selectedPatient?.id === id) selectPatient(null);
         fetchPatients();
-      } catch (error) {
+      } catch {
         alert('Erro ao excluir paciente');
       }
     }

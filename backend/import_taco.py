@@ -30,9 +30,11 @@ def import_data():
     print("Creating tables...")
     Base.metadata.create_all(bind=engine)
     
-    file_path = r"c:\Users\paulo.santos\Documents\trae_projects\DietCalc\Tabela TACO Alimentos Excel.xlsx"
+    # Path relative to the backend directory (script is in backend folder)
+    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    file_path = os.path.join(base_dir, "Tabela TACO Alimentos Excel.xlsx")
     if not os.path.exists(file_path):
-        print("File not found!")
+        print(f"File not found at: {file_path}")
         return
 
     print("Reading Excel...")

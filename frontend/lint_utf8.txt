@@ -1,0 +1,41 @@
+﻿
+C:\Users\paulo.santos\Documents\Antigravity - Projetos\DietCalc\frontend\src\components\foods\FoodSearch.tsx
+  9:15  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\paulo.santos\Documents\Antigravity - Projetos\DietCalc\frontend\src\contexts\CalculatorContext.tsx
+  51:14  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+C:\Users\paulo.santos\Documents\Antigravity - Projetos\DietCalc\frontend\src\contexts\PatientContext.tsx
+   1:54  error    'useEffect' is defined but never used                                                                                           @typescript-eslint/no-unused-vars
+  38:14  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+C:\Users\paulo.santos\Documents\Antigravity - Projetos\DietCalc\frontend\src\hooks\useFoods.ts
+  21:21  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\paulo.santos\Documents\Antigravity - Projetos\DietCalc\frontend\src\pages\Calculator.tsx
+   6:10  error  'NutritionCalculationResponse' is defined but never used  @typescript-eslint/no-unused-vars
+  64:33  error  Unexpected any. Specify a different type                  @typescript-eslint/no-explicit-any
+
+C:\Users\paulo.santos\Documents\Antigravity - Projetos\DietCalc\frontend\src\pages\Dashboard.tsx
+   14:9   error  'navigate' is assigned a value but never used  @typescript-eslint/no-unused-vars
+  178:85  error  Unexpected any. Specify a different type       @typescript-eslint/no-explicit-any
+
+C:\Users\paulo.santos\Documents\Antigravity - Projetos\DietCalc\frontend\src\pages\FoodList.tsx
+  41:41  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\paulo.santos\Documents\Antigravity - Projetos\DietCalc\frontend\src\pages\PatientList.tsx
+   89:21  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  104:16  error  'error' is defined but never used         @typescript-eslint/no-unused-vars
+
+C:\Users\paulo.santos\Documents\Antigravity - Projetos\DietCalc\frontend\src\utils\exports.ts
+    5:72  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   68:72  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   69:14  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  137:19  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\paulo.santos\Documents\Antigravity - Projetos\DietCalc\frontend\src\utils\nutrition.ts
+  1:10  error  'NutritionCalculationRequest' is defined but never used   @typescript-eslint/no-unused-vars
+  1:39  error  'NutritionCalculationResponse' is defined but never used  @typescript-eslint/no-unused-vars
+
+Ô£û 18 problems (16 errors, 2 warnings)
+
