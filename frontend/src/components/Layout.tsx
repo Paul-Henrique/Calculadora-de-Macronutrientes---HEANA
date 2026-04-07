@@ -1,23 +1,26 @@
 import React from 'react';
 import { Link, Outlet, useLocation } from 'react-router-dom';
 import { Disclosure } from '@headlessui/react';
-import { Menu as MenuIcon, X, User, Utensils, Calculator, BarChart2 } from 'lucide-react';
+import { Menu as MenuIcon, X, User, Utensils, Calculator, BarChart2, Users } from 'lucide-react';
 import clsx from 'clsx';
+import { usePatient } from '../contexts/PatientContext';
 
 const navigation = [
   { name: 'Início', href: '/', icon: Utensils },
+  { name: 'Pacientes', href: '/pacientes', icon: Users },
   { name: 'Alimentos', href: '/alimentos', icon: Utensils },
   { name: 'Calculadora', href: '/calculadora', icon: Calculator },
-  { name: 'Refeições', href: '/refeicoes', icon: Utensils }, // Using Utensils for now
+  { name: 'Refeições', href: '/refeicoes', icon: Utensils },
   { name: 'Dashboard', href: '/dashboard', icon: BarChart2 },
 ];
 
 export default function Layout() {
   const location = useLocation();
+  const { selectedPatient } = usePatient();
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Disclosure as="nav" className="bg-white shadow-sm">
+      <Disclosure as="nav" className="bg-white shadow-sm sticky top-0 z-40">
         {({ open }) => (
           <>
             <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -43,7 +46,13 @@ export default function Layout() {
                     ))}
                   </div>
                 </div>
-                <div className="hidden sm:ml-6 sm:flex sm:items-center">
+                <div className="hidden sm:ml-6 sm:flex sm:items-center space-x-4">
+                  {selectedPatient && (
+                    <div className="flex items-center px-3 py-1 bg-green-50 text-green-700 rounded-full border border-green-100 text-sm font-medium">
+                      <User className="w-4 h-4 mr-2" />
+                      <span>Paciente: {selectedPatient.name}</span>
+                    </div>
+                  )}
                   <button
                     type="button"
                     className="rounded-full bg-white p-1 text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"

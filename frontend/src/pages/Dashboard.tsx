@@ -1,13 +1,14 @@
-import React, { useEffect, useState, useRef, useMemo } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { getProfile, getMeals } from '../services/api';
 import { UserProfile, Meal } from '../types';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
 import { AlertTriangle, CheckCircle, Utensils, Download } from 'lucide-react';
 import { Link } from 'react-router-dom';
-
- 
+import { usePatient } from '../contexts/PatientContext';
+import { AlertCircle } from 'lucide-react';
 
 export default function Dashboard() {
+  const { selectedPatient } = usePatient();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [meals, setMeals] = useState<Meal[]>([]);
   const [loading, setLoading] = useState(true);
@@ -18,27 +19,26 @@ export default function Dashboard() {
   const [pdfPage, setPdfPage] = useState<'A4' | 'Letter'>('A4');
   const [pdfExporting, setPdfExporting] = useState(false);
   const [pdfError, setPdfError] = useState<string | null>(null);
-  const chartRef = useRef<HTMLDivElement | null>(null);
-  const [chartImg, setChartImg] = useState<string | null>(null);
-  const [pdfChartError, setPdfChartError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
+      if (!selectedPatient) return;
       try {
         const [profileData, mealsData] = await Promise.all([
-          getProfile().catch(() => null), // Profile might not be set
-          getMeals()
+          getProfile(selectedPatient.id).catch(() => null), // Profile might not be set
+          getMeals(selectedPatient.id)
         ]);
         setProfile(profileData);
         setMeals(mealsData);
       } catch (error) {
-        console.error("Error fetching dashboard data:", error);
+        console.error('Error fetching dashboard data:', error);
       } finally {
         setLoading(false);
       }
     };
+
     fetchData();
-  }, []);
+  }, [selectedPatient]);
 
   const totals = useMemo(() => {
     let kcal = 0, protein = 0, carbs = 0, fat = 0;
@@ -62,77 +62,27 @@ export default function Dashboard() {
     { name: 'Gordura', Meta: profile?.goal_fat_g ?? 0, Consumo: totals.fat },
   ]), [profile?.goal_protein_g, profile?.goal_carbs_g, profile?.goal_fat_g, totals.protein, totals.carbs, totals.fat]);
 
-  useEffect(() => {
-    if (!pdfOpen) return;
-    setPdfChartError(null);
-    setChartImg(null);
-    
-    // Pequeno atraso para garantir que o Recharts tenha renderizado o SVG no DOM
-    const timeoutId = setTimeout(() => {
-      const run = () => {
-        try {
-          const svgEl = chartRef.current?.querySelector('svg');
-          if (!svgEl) {
-            setPdfChartError('Gráfico indisponível para exportação');
-            return;
-          }
-
-          // Clone o SVG para não afetar o original durante a manipulação de estilos se necessário
-          const clonedSvg = svgEl.cloneNode(true) as SVGSVGElement;
-          
-          // Garanta que o SVG tenha dimensões explícitas para o XMLSerializer e Canvas
-          const width = chartRef.current?.clientWidth || 600;
-          const height = chartRef.current?.clientHeight || 300;
-          clonedSvg.setAttribute('width', width.toString());
-          clonedSvg.setAttribute('height', height.toString());
-
-          const content = new XMLSerializer().serializeToString(clonedSvg);
-          const svgBlob = new Blob([content], { type: 'image/svg+xml;charset=utf-8' });
-          const url = URL.createObjectURL(svgBlob);
-          
-          const canvas = document.createElement('canvas');
-          canvas.width = width;
-          canvas.height = height;
-          const ctx = canvas.getContext('2d');
-          
-          if (!ctx) {
-            setPdfChartError('Canvas não disponível');
-            URL.revokeObjectURL(url);
-            return;
-          }
-
-          const img = new Image();
-          img.onload = () => {
-            try {
-              ctx.clearRect(0, 0, width, height);
-              // Preencha o fundo com branco (importante para PDFs)
-              ctx.fillStyle = '#ffffff';
-              ctx.fillRect(0, 0, width, height);
-              ctx.drawImage(img, 0, 0, width, height);
-              const pngUrl = canvas.toDataURL('image/png');
-              setChartImg(pngUrl);
-              URL.revokeObjectURL(url);
-            } catch (e) {
-              console.error('Erro ao rasterizar:', e);
-              setPdfChartError('Falha ao rasterizar gráfico');
-              URL.revokeObjectURL(url);
-            }
-          };
-          img.onerror = () => {
-            setPdfChartError('Falha ao carregar gráfico');
-            URL.revokeObjectURL(url);
-          };
-          img.src = url;
-        } catch (e) {
-          console.error('Erro ao preparar gráfico:', e);
-          setPdfChartError('Erro ao preparar gráfico');
-        }
-      };
-      run();
-    }, 500); // 500ms é geralmente suficiente para o Recharts renderizar
-
-    return () => clearTimeout(timeoutId);
-  }, [pdfOpen, macroComparisonData]);
+  if (!selectedPatient) {
+    return (
+      <div className="max-w-4xl mx-auto p-8 text-center">
+        <div className="bg-indigo-50 p-12 rounded-2xl border border-indigo-100 shadow-sm">
+          <div className="w-20 h-20 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center mx-auto mb-6">
+            <AlertCircle className="w-10 h-10" />
+          </div>
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">Nenhum Paciente Selecionado</h2>
+          <p className="text-gray-600 mb-8 max-w-md mx-auto">
+            Para visualizar o dashboard e gerar relatórios, você precisa primeiro selecionar um paciente na aba de Gerenciamento de Pacientes.
+          </p>
+          <Link 
+            to="/pacientes" 
+            className="inline-flex items-center space-x-2 bg-indigo-600 text-white px-8 py-3 rounded-xl hover:bg-indigo-700 transition-all font-semibold shadow-lg shadow-indigo-200"
+          >
+            <span>Ir para Pacientes</span>
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   if (loading) {
     return <div className="p-8 text-center">Carregando dashboard...</div>;
@@ -361,121 +311,6 @@ export default function Dashboard() {
                   <div className="text-gray-500">% Proteínas</div><div className="text-gray-900">{Math.round(percentProtein)}%</div>
                   <div className="text-gray-500">% Carboidratos</div><div className="text-gray-900">{Math.round(percentCarbs)}%</div>
                   <div className="text-gray-500">% Gorduras</div><div className="text-gray-900">{Math.round(percentFat)}%</div>
-                </div>
-              </div>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <div className="border rounded-md p-3">
-                <div className="font-semibold text-gray-900 mb-2 text-sm">Comparativo de Macros</div>
-                <div className="h-48">
-                  <div ref={chartRef} className="block print:hidden h-full">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={macroComparisonData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="name" />
-                        <YAxis />
-                        <Tooltip />
-                        <Legend />
-                        <Bar dataKey="Meta" fill="#94a3b8" name="Meta" />
-                        <Bar dataKey="Consumo" fill="#4f46e5" name="Consumo" />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </div>
-                  {pdfChartError && (
-                    <div className="hidden print:block text-xs text-red-600">{pdfChartError}</div>
-                  )}
-                  {chartImg && (
-                    <img src={chartImg} alt="Comparativo de Macros" className="hidden print:block w-full" />
-                  )}
-                </div>
-                <div className="mt-2">
-                  <table className="w-full text-xs">
-                    <thead>
-                      <tr className="text-gray-500">
-                        <th className="py-1 pr-2 text-left">Macro</th>
-                        <th className="py-1 pr-2 text-right">Meta</th>
-                        <th className="py-1 pr-2 text-right">Consumo</th>
-                        <th className="py-1 pr-2 text-right">%</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {macroComparisonData.map((row) => {
-                        const meta = row.Meta;
-                        const consumo = row.Consumo;
-                        const pct = Math.min(100, (consumo / meta) * 100);
-                        return (
-                          <tr key={row.name} className="border-t">
-                            <td className="py-1 pr-2 text-gray-900">{row.name}</td>
-                            <td className="py-1 pr-2 text-gray-900 text-right">{Math.round(meta)}</td>
-                            <td className="py-1 pr-2 text-gray-900 text-right">{consumo.toFixed(1)}</td>
-                            <td className="py-1 pr-2 text-gray-900 text-right">{Math.round(pct)}%</td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-              <div className="border rounded-md p-3">
-                <div className="font-semibold text-gray-900 mb-2 text-sm">Status Nutricional</div>
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="text-gray-700">Calorias</span>
-                    <span className="text-gray-700">{Math.round(percentKcal)}%</span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded h-1.5">
-                    <div className="h-1.5 rounded bg-blue-500" style={{ width: `${percentKcal}%` }}></div>
-                  </div>
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="text-gray-700">Proteínas</span>
-                    <span className="text-gray-700">{Math.round(percentProtein)}%</span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded h-1.5">
-                    <div className="h-1.5 rounded bg-indigo-500" style={{ width: `${percentProtein}%` }}></div>
-                  </div>
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="text-gray-700">Carboidratos</span>
-                    <span className="text-gray-700">{Math.round(percentCarbs)}%</span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded h-1.5">
-                    <div className="h-1.5 rounded bg-emerald-500" style={{ width: `${percentCarbs}%` }}></div>
-                  </div>
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="text-gray-700">Gorduras</span>
-                    <span className="text-gray-700">{Math.round(percentFat)}%</span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded h-1.5">
-                    <div className="h-1.5 rounded bg-amber-500" style={{ width: `${percentFat}%` }}></div>
-                  </div>
-                </div>
-                <div className="mt-3">
-                  <div className="font-semibold text-gray-900 mb-2 text-sm">Alertas</div>
-                  <div className="space-y-1">
-                    {percentKcal > 110 && (
-                      <div className="flex items-start p-2 rounded border bg-yellow-50 text-yellow-800 border-yellow-200 text-xs">
-                        <AlertTriangle className="w-4 h-4 mr-2" />
-                        <span>Você ultrapassou sua meta calórica em mais de 10%.</span>
-                      </div>
-                    )}
-                    {percentKcal < 50 && (
-                      <div className="flex items-start p-2 rounded border bg-blue-50 text-blue-800 border-blue-200 text-xs">
-                        <div className="w-4 h-4 mr-2 text-blue-500">i</div>
-                        <span>Consumo calórico muito baixo. Tente fazer mais refeições.</span>
-                      </div>
-                    )}
-                    {percentProtein < 80 && (
-                      <div className="flex items-start p-2 rounded border bg-yellow-50 text-yellow-800 border-yellow-200 text-xs">
-                        <AlertTriangle className="w-4 h-4 mr-2" />
-                        <span>Atenção às proteínas! Importante para manutenção muscular.</span>
-                      </div>
-                    )}
-                    {percentKcal >= 90 && percentKcal <= 110 && (
-                      <div className="flex items-start p-2 rounded border bg-green-50 text-green-800 border-green-200 text-xs">
-                        <CheckCircle className="w-4 h-4 mr-2" />
-                        <span>Parabéns! Você está dentro da faixa ideal de calorias.</span>
-                      </div>
-                    )}
-                  </div>
                 </div>
               </div>
             </div>

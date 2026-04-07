@@ -22,10 +22,12 @@ export default function FoodList() {
 
   const fetchCategories = useCallback(async () => {
     try {
+      console.log('[FoodList] Buscando categorias...');
       const response = await api.get('/foods/categories');
+      console.log(`[FoodList] ${response.data.length} categorias encontradas.`);
       setCategories(response.data);
     } catch (error) {
-      console.error('Error fetching categories:', error);
+      console.error('[FoodList] Erro ao buscar categorias:', error);
     }
   }, []);
 
@@ -35,15 +37,26 @@ export default function FoodList() {
 
   const fetchFoods = useCallback(async () => {
     setLoading(true);
+    setErrorMsg('');
     try {
-      const params: { skip: number; limit: number; search?: string; category_id?: number } = { skip: 0, limit: 50 };
+      const params: { skip: number; limit: number; search?: string; category_id?: number } = { skip: 0, limit: 100 };
       if (searchTerm) params.search = searchTerm;
-      if (selectedCategory) params.category_id = selectedCategory;
+      if (selectedCategory !== '' && selectedCategory !== null) {
+        params.category_id = Number(selectedCategory);
+      }
 
+      console.log('[FoodList] Buscando alimentos com params:', params);
       const response = await api.get('/foods/', { params });
+      console.log(`[FoodList] ${response.data.length} alimentos encontrados.`);
+      
+      if (!Array.isArray(response.data)) {
+        throw new Error('Resposta da API não é uma lista');
+      }
+      
       setFoods(response.data);
-    } catch (error) {
-      console.error('Error fetching foods:', error);
+    } catch (error: unknown) {
+      console.error('[FoodList] Erro ao buscar alimentos:', error);
+      setErrorMsg('Erro ao carregar lista de alimentos. Verifique a conexão com o servidor.');
     } finally {
       setLoading(false);
     }

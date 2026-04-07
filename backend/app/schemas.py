@@ -1,7 +1,29 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from typing import Optional, List, Dict
 from enum import Enum
+from datetime import date
 
+# Patient Schemas
+class PatientBase(BaseModel):
+    name: str
+    cpf: Optional[str] = None
+    birth_date: Optional[date] = None
+    sex: Optional[str] = None
+
+class PatientCreate(PatientBase):
+    pass
+
+class PatientUpdate(BaseModel):
+    name: Optional[str] = None
+    cpf: Optional[str] = None
+    birth_date: Optional[date] = None
+    sex: Optional[str] = None
+
+class Patient(PatientBase):
+    id: int
+    model_config = ConfigDict(from_attributes=True)
+
+# Food Schemas
 class FoodBase(BaseModel):
     name: str
     description: Optional[str]
@@ -15,9 +37,7 @@ class FoodBase(BaseModel):
 class Food(FoodBase):
     id: int
     category_id: Optional[int]
-
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 class FoodCreate(BaseModel):
     name: str
@@ -47,15 +67,11 @@ class CategoryBase(BaseModel):
 class Category(CategoryBase):
     id: int
     foods: List[Food] = []
-
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 class CategorySimple(CategoryBase):
     id: int
-
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 # Nutrition Calculation Schemas
 
@@ -103,12 +119,11 @@ class MealItem(MealItemBase):
     id: int
     meal_id: int
     food: Optional[Food] = None
-
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 class MealBase(BaseModel):
     name: str
+    patient_id: Optional[int] = None
 
 class MealCreate(MealBase):
     items: List[MealItemCreate] = []
@@ -116,14 +131,13 @@ class MealCreate(MealBase):
 class Meal(MealBase):
     id: int
     items: List[MealItem] = []
-
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 # User Profile Schemas
 
 class UserProfileBase(BaseModel):
     name: str = "User"
+    patient_id: Optional[int] = None
     age: int
     weight: float
     height: float
@@ -136,14 +150,36 @@ class UserProfileBase(BaseModel):
     goal_carbs_g: float
     goal_fat_g: float
 
+    # Medidas Antropométricas
+    circ_waist: Optional[float] = None
+    circ_hip: Optional[float] = None
+    circ_abdomen: Optional[float] = None
+    circ_right_arm: Optional[float] = None
+    circ_right_thigh: Optional[float] = None
+
+    # Anamnese
+    comorbidities: Optional[str] = None
+    dietary_restrictions: Optional[str] = None
+    intestinal_habit: Optional[str] = None
+    water_intake: Optional[str] = None
+    physical_activity: Optional[str] = None
+    patient_goal: Optional[str] = None
+    schedule_routine: Optional[str] = None
+
+    # Exames
+    lab_triglycerides: Optional[float] = None
+    lab_glucose: Optional[float] = None
+    lab_cholesterol: Optional[float] = None
+
+    # Conduta
+    nutritionist_conduct: Optional[str] = None
+
 class UserProfileCreate(UserProfileBase):
     pass
 
 class UserProfile(UserProfileBase):
     id: int
-
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 # Household Measure Schemas
 
@@ -157,6 +193,4 @@ class HouseholdMeasureCreate(HouseholdMeasureBase):
 class HouseholdMeasure(HouseholdMeasureBase):
     id: int
     food_id: int
-
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)

@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from typing import List
+from typing import List, Optional
 from .. import models, schemas, database
 
 router = APIRouter(
@@ -10,7 +10,7 @@ router = APIRouter(
 
 @router.post("/", response_model=schemas.Meal)
 def create_meal(meal: schemas.MealCreate, db: Session = Depends(database.get_db)):
-    db_meal = models.Meal(name=meal.name)
+    db_meal = models.Meal(name=meal.name, patient_id=meal.patient_id)
     db.add(db_meal)
     db.commit()
     db.refresh(db_meal)
@@ -28,8 +28,11 @@ def create_meal(meal: schemas.MealCreate, db: Session = Depends(database.get_db)
     return db_meal
 
 @router.get("/", response_model=List[schemas.Meal])
-def read_meals(skip: int = 0, limit: int = 100, db: Session = Depends(database.get_db)):
-    meals = db.query(models.Meal).offset(skip).limit(limit).all()
+def read_meals(patient_id: Optional[int] = None, skip: int = 0, limit: int = 100, db: Session = Depends(database.get_db)):
+    query = db.query(models.Meal)
+    if patient_id:
+        query = query.filter(models.Meal.patient_id == patient_id)
+    meals = query.offset(skip).limit(limit).all()
     return meals
 
 @router.get("/{meal_id}", response_model=schemas.Meal)

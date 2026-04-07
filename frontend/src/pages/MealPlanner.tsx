@@ -1,10 +1,13 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Plus, Trash2, Utensils } from 'lucide-react';
+import { Plus, Trash2, Utensils, AlertCircle } from 'lucide-react';
 import { getMeals, createMeal, deleteMeal, addMealItem, removeMealItem } from '../services/api';
 import { Meal } from '../types';
 import FoodSelector from '../components/FoodSelector';
+import { usePatient } from '../contexts/PatientContext';
+import { Link } from 'react-router-dom';
 
 export default function MealPlanner() {
+  const { selectedPatient } = usePatient();
   const [meals, setMeals] = useState<Meal[]>([]);
   const [loading, setLoading] = useState(true);
   const [isSelectorOpen, setIsSelectorOpen] = useState(false);
@@ -14,29 +17,22 @@ export default function MealPlanner() {
   // Daily totals
   const [dailyTotals, setDailyTotals] = useState({ kcal: 0, protein: 0, carbs: 0, fat: 0 });
 
-  useEffect(() => {
-    fetchMeals();
-  }, []);
-
-  
-
-  const fetchMeals = async () => {
+  const fetchMeals = useCallback(async () => {
+    if (!selectedPatient) return;
     setLoading(true);
     try {
-      const data = await getMeals();
-      // Populate food details for each item if backend doesn't fully do it (backend schema suggests it does via ORM, but let's check)
-      // Actually, backend MealItem schema has `food: Optional[Food] = None`. 
-      // The route `read_meals` uses `db.query(models.Meal).all()`.
-      // SQLAlchemy `relationship` lazy loading might be an issue if not configured or joinedload not used.
-      // Ideally backend should use `joinedload`.
-      // For now, let's assume it works or fix backend if needed.
+      const data = await getMeals(selectedPatient.id);
       setMeals(data);
     } catch (error) {
       console.error('Error fetching meals:', error);
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedPatient]);
+
+  useEffect(() => {
+    fetchMeals();
+  }, [fetchMeals]);
 
   const calculateDailyTotals = useCallback(() => {
     let kcal = 0, protein = 0, carbs = 0, fat = 0;
@@ -60,9 +56,12 @@ export default function MealPlanner() {
 
   const handleCreateMeal = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newMealName.trim()) return;
+    if (!newMealName.trim() || !selectedPatient) return;
     try {
-      const newMeal = await createMeal({ name: newMealName });
+      const newMeal = await createMeal({ 
+        name: newMealName,
+        patient_id: selectedPatient.id 
+      });
       setMeals([...meals, newMeal]);
       setNewMealName('');
     } catch (error) {
@@ -104,6 +103,32 @@ export default function MealPlanner() {
         console.error('Error removing item:', error);
     }
   };
+
+  if (!selectedPatient) {
+    return (
+      <div className="max-w-4xl mx-auto p-8 text-center">
+        <div className="bg-indigo-50 p-12 rounded-2xl border border-indigo-100 shadow-sm">
+          <div className="w-20 h-20 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center mx-auto mb-6">
+            <AlertCircle className="w-10 h-10" />
+          </div>
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">Nenhum Paciente Selecionado</h2>
+          <p className="text-gray-600 mb-8 max-w-md mx-auto">
+            Para gerenciar refeições, você precisa primeiro selecionar um paciente na aba de Gerenciamento de Pacientes.
+          </p>
+          <Link 
+            to="/pacientes" 
+            className="inline-flex items-center space-x-2 bg-indigo-600 text-white px-8 py-3 rounded-xl hover:bg-indigo-700 transition-all font-semibold shadow-lg shadow-indigo-200"
+          >
+            <span>Ir para Pacientes</span>
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  if (loading) {
+    return <div className="p-8 text-center">Carregando refeições...</div>;
+  }
 
   return (
     <div className="max-w-5xl mx-auto space-y-8 p-4">
