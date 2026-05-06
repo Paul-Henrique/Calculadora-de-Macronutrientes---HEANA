@@ -2,13 +2,8 @@ from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from .routers import foods, nutrition, meals, profile, household_measures, patients
-from .database import engine, Base
-from . import database, models
-from sqlalchemy import text
-
-# Bases for SQLAlchemy
-
-from . import database, models, migration_service
+from .database import engine, Base, get_db, get_db_path
+from . import models, migration_service
 
 app = FastAPI(
     title="DietCalc API",
@@ -19,14 +14,13 @@ app = FastAPI(
 @app.on_event("startup")
 async def startup_event():
     # Only migrate if we have a PG engine (not falling back to SQLite)
-    # Check if DATABASE_URL is set and engine is NOT sqlite
-    if "postgresql" in str(database.engine.url):
+    if engine.name == 'postgresql':
         print("[Startup] PostgreSQL detected. Checking for initial migration...")
-        database.Base.metadata.create_all(bind=database.engine)
-        migration_service.migrate_to_pg(database.engine)
+        Base.metadata.create_all(bind=engine)
+        migration_service.migrate_to_pg(engine)
     else:
         print("[Startup] Using SQLite/Fallback mode. Ensuring tables exist...")
-        database.Base.metadata.create_all(bind=database.engine)
+        Base.metadata.create_all(bind=engine)
 
 # CORS (Allow all for dev)
 app.add_middleware(
@@ -44,14 +38,9 @@ app.include_router(profile.router)
 app.include_router(household_measures.router)
 app.include_router(patients.router)
 
-@app.get("/")
-def read_root():
-    return {"message": "Welcome to DietCalc API"}
-
 @app.get("/health")
-def health_check(db: Session = Depends(database.get_db)):
+def health_check(db: Session = Depends(get_db)):
     try:
-        from . import models
         food_count = db.query(models.Food).count()
         cat_count = db.query(models.Category).count()
         return {
@@ -59,8 +48,7 @@ def health_check(db: Session = Depends(database.get_db)):
             "database": "connected",
             "food_count": food_count,
             "category_count": cat_count,
-            "db_path": database.get_db_path()
+            "db_path": get_db_path()
         }
     except Exception as e:
         return {"status": "unhealthy", "error": str(e)}
-

@@ -10,6 +10,7 @@ class Patient(Base):
     cpf = Column(String, unique=True, index=True, nullable=True)
     birth_date = Column(Date, nullable=True)
     sex = Column(String, nullable=True)
+    nutritionist_name = Column(String, nullable=True)
     
     # Relationships
     user_profiles = relationship("UserProfile", back_populates="patient", cascade="all, delete-orphan")
@@ -73,7 +74,7 @@ class HouseholdMeasure(Base):
     __tablename__ = "household_measures"
 
     id = Column(Integer, primary_key=True, index=True)
-    food_id = Column(Integer, ForeignKey("foods.id"))
+    food_id = Column(Integer, ForeignKey("foods.id"), index=True)
     unit_name = Column(String) # e.g. "Fatia", "Colher de sopa"
     quantity_g = Column(Float) # e.g. 25.0
     
@@ -83,7 +84,7 @@ class Meal(Base):
     __tablename__ = "meals"
 
     id = Column(Integer, primary_key=True, index=True)
-    patient_id = Column(Integer, ForeignKey("patients.id"), nullable=True)
+    patient_id = Column(Integer, ForeignKey("patients.id"), nullable=True, index=True)
     name = Column(String) # e.g. "Breakfast", "Lunch"
     
     patient = relationship("Patient", back_populates="meals")
@@ -93,7 +94,7 @@ class MealItem(Base):
     __tablename__ = "meal_items"
 
     id = Column(Integer, primary_key=True, index=True)
-    meal_id = Column(Integer, ForeignKey("meals.id"))
+    meal_id = Column(Integer, ForeignKey("meals.id"), index=True)
     food_id = Column(Integer, ForeignKey("foods.id"))
     quantity = Column(Float) # in grams
     

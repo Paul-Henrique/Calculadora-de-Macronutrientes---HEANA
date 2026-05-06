@@ -15,5 +15,14 @@ if __name__ == "__main__":
     # Ensure tables exists (Alembic might not have run if it's first run in a new path)
     Base.metadata.create_all(bind=engine)
     
+    # Patch SQLite schema for older database versions
+    if engine.name == "sqlite":
+        from sqlalchemy import text
+        with engine.begin() as conn:
+            try:
+                conn.execute(text("ALTER TABLE patients ADD COLUMN nutritionist_name VARCHAR"))
+            except Exception:
+                pass
+    
     # Start the server using the app object directly
     uvicorn.run(app, host="0.0.0.0", port=8000, log_level="info")

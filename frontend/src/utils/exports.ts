@@ -86,17 +86,25 @@ export const exportPDF = (profile: UserProfile, meals: Meal[], totals: { kcal: n
   doc.setTextColor(0);
   doc.text('1. Informações do Paciente', 14, 35);
   
-  autoTable(doc, {
-    startY: 40,
-    head: [['Campo', 'Valor']],
-    body: [
+  const patientInfoBody = [
       ['Nome', profile.name],
       ['Idade', `${profile.age} anos`],
       ['Peso', `${profile.weight} kg`],
       ['Altura', `${profile.height} cm`],
       ['Sexo', profile.sex === 'M' ? 'Masculino' : 'Feminino'],
       ['Nível de Atividade', profile.activity_level]
-    ],
+  ];
+
+  if (profile.circ_waist) patientInfoBody.push(['Cintura', `${profile.circ_waist} cm`]);
+  if (profile.circ_hip) patientInfoBody.push(['Quadril', `${profile.circ_hip} cm`]);
+  if (profile.circ_abdomen) patientInfoBody.push(['Abdômen', `${profile.circ_abdomen} cm`]);
+  if (profile.circ_right_arm) patientInfoBody.push(['Braço Direito', `${profile.circ_right_arm} cm`]);
+  if (profile.circ_right_thigh) patientInfoBody.push(['Coxa Direita', `${profile.circ_right_thigh} cm`]);
+
+  autoTable(doc, {
+    startY: 40,
+    head: [['Campo', 'Valor']],
+    body: patientInfoBody,
     theme: 'striped',
     headStyles: { fillColor: [79, 70, 229] }
   });
@@ -137,13 +145,36 @@ export const exportPDF = (profile: UserProfile, meals: Meal[], totals: { kcal: n
   
   const mealRows: unknown[][] = [];
   meals.forEach(meal => {
-    mealRows.push([{ content: `Refeição: ${meal.name}`, colSpan: 5, styles: { fillColor: [243, 244, 246], fontStyle: 'bold' } }]);
+    mealRows.push([{ content: `Refeição: ${meal.name}`, colSpan: 6, styles: { fillColor: [243, 244, 246], fontStyle: 'bold' } }]);
     
     meal.items.forEach(item => {
       const food = item.food;
       const ratio = item.quantity / 100;
+
+      let measureStr = '-';
+      if (food?.household_measures && food.household_measures.length > 0) {
+        const measures = food.household_measures;
+        let found = false;
+        for (const measure of measures) {
+          const mRatio = item.quantity / measure.quantity_g;
+          if (Math.abs(mRatio - Math.round(mRatio)) < 0.01 || Math.abs(mRatio - Math.round(mRatio * 2) / 2) < 0.01) {
+            measureStr = mRatio === 1 ? `1 ${measure.unit_name}` : `${Number(mRatio.toFixed(1))} ${measure.unit_name}`;
+            found = true;
+            break;
+          }
+        }
+        if (!found) {
+          const closestMeasure = measures.reduce((prev, curr) => {
+            return Math.abs(curr.quantity_g - item.quantity) < Math.abs(prev.quantity_g - item.quantity) ? curr : prev;
+          });
+          const mRatio = item.quantity / closestMeasure.quantity_g;
+          measureStr = `~${Number(mRatio.toFixed(1))} ${closestMeasure.unit_name}`;
+        }
+      }
+
       mealRows.push([
         food?.name || 'Alimento desconhecido',
+        measureStr,
         `${item.quantity}g`,
         `${Math.round((food?.energy_kcal || 0) * ratio)} kcal`,
         `${((food?.protein || 0) * ratio).toFixed(1)}g P`,
@@ -154,10 +185,30 @@ export const exportPDF = (profile: UserProfile, meals: Meal[], totals: { kcal: n
 
   autoTable(doc, {
     startY: doc.lastAutoTable.finalY + 15,
-    head: [['Alimento', 'Qtd', 'Kcal', 'Proteína', 'Carbo/Gord']],
+    head: [['Alimento', 'Medida Caseira', 'Qtd', 'Kcal', 'Proteína', 'Carbo/Gord']],
     body: mealRows,
     theme: 'striped',
     styles: { fontSize: 9 }
+  });
+
+  // Consumo Hídrico
+  const waterRecommendation = profile.weight * 35;
+  const waterLiters = (waterRecommendation / 1000).toFixed(1);
+
+  doc.setFontSize(14);
+  doc.setTextColor(0);
+  doc.text('5. Consumo Hídrico', 14, doc.lastAutoTable.finalY + 10);
+  
+  autoTable(doc, {
+    startY: doc.lastAutoTable.finalY + 15,
+    head: [['Recomendação Diária (35ml/kg)', 'Consumo Anamnese']],
+    body: [[
+      `${waterRecommendation} ml (${waterLiters} Litros)`,
+      profile.water_intake || 'Não informado'
+    ]],
+    theme: 'grid',
+    headStyles: { fillColor: [14, 165, 233] }, // sky-500
+    styles: { halign: 'center' }
   });
 
   doc.save(`relatorio_${profile.name.replace(/\s+/g, '_').toLowerCase()}.pdf`);

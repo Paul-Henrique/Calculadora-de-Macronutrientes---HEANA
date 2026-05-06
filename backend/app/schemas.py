@@ -14,6 +14,7 @@ class PatientBase(BaseModel):
     cpf: Optional[str] = None
     birth_date: Optional[date] = None
     sex: Optional[str] = None
+    nutritionist_name: Optional[str] = None
 
 class PatientCreate(PatientBase):
     pass
@@ -23,6 +24,7 @@ class PatientUpdate(BaseModel):
     cpf: Optional[str] = None
     birth_date: Optional[date] = None
     sex: Optional[str] = None
+    nutritionist_name: Optional[str] = None
 
 class Patient(PatientBase, BaseSchema):
     id: int
