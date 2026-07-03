@@ -86,6 +86,7 @@ class Meal(Base):
     id = Column(Integer, primary_key=True, index=True)
     patient_id = Column(Integer, ForeignKey("patients.id"), nullable=True, index=True)
     name = Column(String) # e.g. "Breakfast", "Lunch"
+    observation = Column(String, nullable=True)
     
     patient = relationship("Patient", back_populates="meals")
     items = relationship("MealItem", back_populates="meal", cascade="all, delete-orphan")

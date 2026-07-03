@@ -11,6 +11,8 @@ app = FastAPI(
     version="0.1.0"
 )
 
+from sqlalchemy import inspect, text
+
 @app.on_event("startup")
 async def startup_event():
     # Only migrate if we have a PG engine (not falling back to SQLite)
@@ -21,6 +23,18 @@ async def startup_event():
     else:
         print("[Startup] Using SQLite/Fallback mode. Ensuring tables exist...")
         Base.metadata.create_all(bind=engine)
+    
+    # Run manual migration for adding observation column to meals table if it doesn't exist
+    try:
+        inspector = inspect(engine)
+        columns = [c['name'] for c in inspector.get_columns('meals')]
+        if 'observation' not in columns:
+            print("[Startup] Column 'observation' not found in table 'meals'. Adding it...")
+            with engine.begin() as conn:
+                conn.execute(text("ALTER TABLE meals ADD COLUMN observation TEXT"))
+            print("[Startup] Column 'observation' successfully added to table 'meals'.")
+    except Exception as e:
+        print(f"[Startup] Error during migration check: {e}")
 
 # CORS (Allow all for dev)
 app.add_middleware(

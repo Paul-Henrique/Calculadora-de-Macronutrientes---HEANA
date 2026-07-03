@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Plus, Utensils, AlertCircle } from 'lucide-react';
-import { getMeals, createMeal, deleteMeal, addMealItem, removeMealItem } from '../services/api';
+import { getMeals, createMeal, updateMeal, deleteMeal, addMealItem, removeMealItem } from '../services/api';
 import { Meal } from '../types';
 import FoodSelector from '../components/FoodSelector';
 import { usePatient } from '../contexts/PatientContext';
@@ -99,6 +99,15 @@ export default function MealPlanner() {
     }
   };
 
+  const handleUpdateObservation = async (mealId: number, observation: string) => {
+    try {
+      const updatedMeal = await updateMeal(mealId, { observation });
+      setMeals(meals.map(m => m.id === mealId ? updatedMeal : m));
+    } catch (error) {
+      console.error('Error updating meal observation:', error);
+    }
+  };
+
   if (!selectedPatient) {
     return (
       <div className="max-w-4xl mx-auto p-8 text-center">
@@ -172,6 +181,7 @@ export default function MealPlanner() {
                  onDelete={() => handleDeleteMeal(meal.id)}
                  onAddFood={() => openFoodSelector(meal.id)}
                  onRemoveItem={(itemId) => handleRemoveItem(meal.id, itemId)}
+                 onUpdateObservation={(obs) => handleUpdateObservation(meal.id, obs)}
                />
              ))
         )}

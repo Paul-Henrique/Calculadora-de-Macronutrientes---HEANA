@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Trash2, Plus } from 'lucide-react';
 import { Meal } from '../../types';
 import { formatNumber } from '../../utils/formatters';
@@ -8,9 +8,21 @@ interface MealCardProps {
   onDelete: () => void;
   onAddFood: () => void;
   onRemoveItem: (id: number) => void;
+  onUpdateObservation?: (observation: string) => void;
 }
 
-export const MealCard: React.FC<MealCardProps> = ({ meal, onDelete, onAddFood, onRemoveItem }) => {
+export const MealCard: React.FC<MealCardProps> = ({ meal, onDelete, onAddFood, onRemoveItem, onUpdateObservation }) => {
+  const [observation, setObservation] = useState(meal.observation || '');
+
+  useEffect(() => {
+    setObservation(meal.observation || '');
+  }, [meal.observation]);
+
+  const handleBlur = () => {
+    if (observation !== (meal.observation || '')) {
+      onUpdateObservation?.(observation);
+    }
+  };
   const kcalTotal = meal.items.reduce((total, item) => {
     if (!item.food) return total;
     return total + (item.food.energy_kcal || 0) * (item.quantity / 100);
@@ -109,6 +121,20 @@ export const MealCard: React.FC<MealCardProps> = ({ meal, onDelete, onAddFood, o
             Adicionar Alimento
           </button>
         </div>
+      </div>
+
+      <div className="p-4 border-t border-gray-100 bg-gray-50/50">
+        <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+          Observações da Refeição
+        </label>
+        <textarea
+          value={observation}
+          onChange={(e) => setObservation(e.target.value)}
+          onBlur={handleBlur}
+          placeholder="Ex: Beber 200ml de água morna em jejum, evitar café..."
+          rows={2}
+          className="w-full text-sm border-gray-200 rounded-lg focus:ring-green-500 focus:border-green-500 bg-white placeholder-gray-400 transition-all shadow-sm"
+        />
       </div>
     </div>
   );

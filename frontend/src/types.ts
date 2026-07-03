@@ -103,12 +103,14 @@ export interface Meal {
     id: number;
     patient_id?: number;
     name: string;
+    observation?: string;
     items: MealItem[];
 }
 
 export interface MealCreate {
     name: string;
     patient_id?: number;
+    observation?: string;
     items?: MealItemCreate[];
 }
 

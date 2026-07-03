@@ -134,9 +134,14 @@ class MealItem(MealItemBase, BaseSchema):
 class MealBase(BaseModel):
     name: str = Field(..., min_length=1)
     patient_id: Optional[int] = None
+    observation: Optional[str] = None
 
 class MealCreate(MealBase):
     items: List[MealItemCreate] = []
+
+class MealUpdate(BaseModel):
+    name: Optional[str] = None
+    observation: Optional[str] = None
 
 class Meal(MealBase, BaseSchema):
     id: int

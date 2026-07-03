@@ -88,6 +88,11 @@ export const createMeal = async (data: MealCreate): Promise<Meal> => {
   return response.data;
 };
 
+export const updateMeal = async (id: number, data: { name?: string; observation?: string }): Promise<Meal> => {
+  const response = await api.put<Meal>(`/meals/${id}`, data);
+  return response.data;
+};
+
 export const deleteMeal = async (id: number): Promise<void> => {
   await api.delete(`/meals/${id}`);
 };

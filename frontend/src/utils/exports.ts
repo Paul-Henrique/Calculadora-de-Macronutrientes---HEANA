@@ -2,6 +2,14 @@ import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { UserProfile, Meal } from '../types';
 
+const activityLevelMap: Record<string, string> = {
+  'sedentary': 'Sedentário',
+  'lightly_active': 'Levemente Ativo',
+  'moderately_active': 'Moderadamente Ativo',
+  'very_active': 'Muito Ativo',
+  'extra_active': 'Extremamente Ativo'
+};
+
 export const exportCSV = (profile: UserProfile, meals: Meal[], totals: { kcal: number; protein: number; carbs: number; fat: number }) => {
   // ... (previous CSV logic remains the same, but I'll make sure it's complete)
   const csvEscape = (v: unknown) => {
@@ -19,7 +27,7 @@ export const exportCSV = (profile: UserProfile, meals: Meal[], totals: { kcal: n
   rows.push(['Calculadora','Peso', profile.weight].map(csvEscape).join(','));
   rows.push(['Calculadora','Altura', profile.height].map(csvEscape).join(','));
   rows.push(['Calculadora','Sexo', profile.sex].map(csvEscape).join(','));
-  rows.push(['Calculadora','Atividade', profile.activity_level].map(csvEscape).join(','));
+  rows.push(['Calculadora','Atividade', activityLevelMap[profile.activity_level] || profile.activity_level].map(csvEscape).join(','));
   rows.push(['Calculadora','TMB', profile.goal_tmb].map(csvEscape).join(','));
   rows.push(['Calculadora','GET', profile.goal_get].map(csvEscape).join(','));
   rows.push(['Calculadora','Proteina_meta_g', profile.goal_protein_g].map(csvEscape).join(','));
@@ -92,7 +100,7 @@ export const exportPDF = (profile: UserProfile, meals: Meal[], totals: { kcal: n
       ['Peso', `${profile.weight} kg`],
       ['Altura', `${profile.height} cm`],
       ['Sexo', profile.sex === 'M' ? 'Masculino' : 'Feminino'],
-      ['Nível de Atividade', profile.activity_level]
+      ['Nível de Atividade', activityLevelMap[profile.activity_level] || profile.activity_level]
   ];
 
   if (profile.circ_waist) patientInfoBody.push(['Cintura', `${profile.circ_waist} cm`]);
@@ -181,6 +189,11 @@ export const exportPDF = (profile: UserProfile, meals: Meal[], totals: { kcal: n
         `${((food?.carbohydrate || 0) * ratio).toFixed(1)}g C / ${((food?.lipid || 0) * ratio).toFixed(1)}g G`
       ]);
     });
+    
+    // Add observation row below meal items if it exists
+    if (meal.observation && meal.observation.trim()) {
+      mealRows.push([{ content: `Observação: ${meal.observation}`, colSpan: 6, styles: { fontStyle: 'italic', textColor: [100, 100, 100], fontSize: 8.5 } }]);
+    }
   });
 
   autoTable(doc, {
